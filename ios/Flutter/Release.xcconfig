@@ -1,0 +1,20 @@
+#include "Generated.xcconfig"
+
+// iOS Release Build Optimizations
+FLUTTER_BUILD_MODE = release
+FLUTTER_BUILD_NUMBER = 1
+FLUTTER_BUILD_NAME = 1.0.0
+
+// Performance optimizations
+GCC_OPTIMIZATION_LEVEL = 3
+SWIFT_OPTIMIZATION_LEVEL = -O
+ENABLE_BITCODE = NO
+
+// Size optimizations
+STRIP_INSTALLED_PRODUCT = YES
+SEPARATE_STRIP = YES
+COPY_PHASE_STRIP = YES
+
+// Security optimizations
+GCC_GENERATE_DEBUG_SYMBOLS = NO
+DEBUG_INFORMATION_FORMAT = dwarf

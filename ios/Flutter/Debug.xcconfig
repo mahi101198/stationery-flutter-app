@@ -1,0 +1,15 @@
+#include "Generated.xcconfig"
+
+// iOS Debug Build Configuration
+FLUTTER_BUILD_MODE = debug
+FLUTTER_BUILD_NUMBER = 1
+FLUTTER_BUILD_NAME = 1.0.0
+
+// Debug optimizations
+GCC_OPTIMIZATION_LEVEL = 0
+SWIFT_OPTIMIZATION_LEVEL = -Onone
+ENABLE_BITCODE = NO
+
+// Debug information
+GCC_GENERATE_DEBUG_SYMBOLS = YES
+DEBUG_INFORMATION_FORMAT = dwarf-with-dsym

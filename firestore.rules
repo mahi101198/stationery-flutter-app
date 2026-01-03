@@ -1,0 +1,149 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isValidUser() {
+      return isAuthenticated() && request.auth.uid != null;
+    }
+
+    // Users collection - users can read/write their own data
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+      
+      // Allow reading user data for referral validation
+      allow read: if isAuthenticated();
+      
+      // Subcollections within users
+      match /{subcollection=**} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Orders collection - users can read their own orders, delivery confirmation updates allowed
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || 
+         request.auth.uid in resource.data.get('allowedUsers', []));
+      
+      allow create: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      
+      // Allow updates for delivery confirmation and order status changes
+      allow update: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || 
+         // Allow delivery confirmation updates
+         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveryConfirmed', 'confirmationTimestamp', 'userResponded', 'rejectionTimestamp']) &&
+          resource.data.userId == request.auth.uid) ||
+         // Allow status updates from backend
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']));
+    }
+
+    // Products collection - read-only for authenticated users
+    match /products/{productId} {
+      allow read: if isAuthenticated();
+    }
+
+    // Categories collection - read-only for authenticated users
+    match /categories/{categoryId} {
+      allow read: if isAuthenticated();
+    }
+
+    // Cart collection - users can manage their own cart
+    match /cart/{userId} {
+      allow read, write: if isOwner(userId);
+      
+      match /items/{itemId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Wishlist collection - users can manage their own wishlist
+    match /wishlist/{userId} {
+      allow read, write: if isOwner(userId);
+      
+      match /items/{itemId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Addresses collection - users can manage their own addresses
+    match /addresses/{addressId} {
+      allow read, write: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Payments collection - users can read their own payments
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Deliveries collection - users can read their own deliveries
+    match /deliveries/{deliveryId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Transactions collection - users can read their own transactions
+    match /transactions/{transactionId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Notifications collection - users can read/update their own notifications
+    match /notifications/{notificationId} {
+      allow read, update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Reviews collection - users can create/read reviews, update their own
+    match /reviews/{reviewId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Coupons collection - read-only for authenticated users
+    match /coupons/{couponId} {
+      allow read: if isAuthenticated();
+    }
+
+    // Settings collection - read-only for authenticated users (app configuration)
+    match /settings/{settingId} {
+      allow read: if isAuthenticated();
+    }
+
+    // Banners collection - read-only for authenticated users
+    match /banners/{bannerId} {
+      allow read: if isAuthenticated();
+    }
+
+    // Support/Help collections - users can create tickets, read their own
+    match /support/{ticketId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // FCM Tokens - users can manage their own tokens
+    match /fcmTokens/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Analytics and logs - write-only for authenticated users
+    match /analytics/{document=**} {
+      allow write: if isAuthenticated();
+    }
+
+    // Default deny rule for any other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
