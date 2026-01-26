@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "1090273726787",
+    "firebase_url": "https://rps-statationary-jaipur-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "rps-statationary-jaipur",
+    "storage_bucket": "rps-statationary-jaipur.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1090273726787:android:3bccb0081d791577701ff6",
+        "android_client_info": {
+          "package_name": "com.devay.rps"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1090273726787-qgou2dog9b90b2rienao2tk8k4gbue4i.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.devay.rps",
+            "certificate_hash": "8e2b16e99f70a10814d0ee77b195b35c93f11ab9"
+          }
+        },
+        {
+          "client_id": "1090273726787-o06cvumlg0huf25r4bkd4ji6cfd2sn49.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDH0Pp1ptFG3d2xAila3Zy4EgqrmqK2Nkk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1090273726787-o06cvumlg0huf25r4bkd4ji6cfd2sn49.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1090273726787-8fcbjdhc14lj0hsdu9e65amrfod6v9it.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.devay.rpsStationery"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

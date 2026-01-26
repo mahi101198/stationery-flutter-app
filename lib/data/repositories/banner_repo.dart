@@ -59,6 +59,20 @@ class BannerRepo extends GetxController {
         final linkTo = data['linkTo']?.toString() ?? '';
         final rank = parsePriority(data['rank']);
         final isActive = parseBool(data['isActive']);
+        double parseDuration(dynamic value) {
+          if (value == null) return 0.5;
+          if (value is num) {
+            final v = value.toDouble();
+            return v <= 0 ? 0.5 : v;
+          }
+          if (value is String) {
+            final parsed = double.tryParse(value);
+            if (parsed == null || parsed <= 0) return 0.5;
+            return parsed;
+          }
+          return 0.5;
+        }
+        final viewChangeTimeSeconds = parseDuration(data['view_change_time']);
         
         log('🇮🇲 Image URL: $imageUrl');
         log('🆔 Banner ID: $bannerId');
@@ -77,6 +91,7 @@ class BannerRepo extends GetxController {
               ? (data['createdAt'] as Timestamp).toDate()
               : DateTime.tryParse((data['createdAt'] ?? '').toString()) ?? DateTime(2000, 1, 1),
           validTill: DateTime(2100, 1, 1), // No expiry in your schema, set far future
+          viewChangeTimeSeconds: viewChangeTimeSeconds,
         );
         
         log('✅ Successfully created banner model for: $bannerId');

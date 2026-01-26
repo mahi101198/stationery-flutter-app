@@ -6,7 +6,7 @@ class ImageString {
   ImageString._();
 
   // -- App Logos
-  static const String appLogo = "assets/logo/stationery_icon";
+  static const String appLogo = "assets/logo/stationery_icon.png";
 
   // -- Social Logos
   static const String google = "assets/logo/google_icon.png";

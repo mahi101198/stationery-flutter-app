@@ -1,0 +1,2 @@
+Loaded keys: [storePassword, keyAlias, keyPassword, storeFile]
+File path: D:\backup rps\rps-stationery-main\android\app\key.properties

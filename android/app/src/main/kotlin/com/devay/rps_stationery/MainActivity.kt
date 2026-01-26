@@ -1,4 +1,4 @@
-package com.devay.rps_stationery
+package com.devay.rps
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -145,12 +145,15 @@ class _OptimizedCategoryScreenState extends State<OptimizedCategoryScreen> {
         });
       }
       
-      // Filter products by subcategory (if we have products loaded)
       if (subCategoryId != null) {
-        print('🎯 OptimizedCategoryScreen: Filtering products by subcategory: $subCategoryId');
-        _productController.filterProductsBySubCategory(subCategoryId);
+        if (_productController.allCategoryProducts.isEmpty) {
+          print('🎯 OptimizedCategoryScreen: No category products loaded, fetching for subcategory: $subCategoryId');
+          _productController.loadProductsForSubCategory(subCategoryId);
+        } else {
+          print('🎯 OptimizedCategoryScreen: Filtering products by subcategory: $subCategoryId');
+          _productController.filterProductsBySubCategory(subCategoryId);
+        }
       } else {
-        // Show all products for the category
         print('🎯 OptimizedCategoryScreen: Showing all products for category: $categoryId');
         _productController.showAllProductsForCategory();
       }
@@ -525,6 +528,7 @@ class _OptimizedCategoryScreenState extends State<OptimizedCategoryScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context) {
+    final isSubSelected = _selectedSubCategoryId != null;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -544,11 +548,26 @@ class _OptimizedCategoryScreenState extends State<OptimizedCategoryScreen> {
           ),
           const SizedBox(height: defaultPadding / 2),
           Text(
-            'Try selecting a different category',
+            isSubSelected
+                ? 'No products in this subcategory yet'
+                : 'Try selecting a different category',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
+            textAlign: TextAlign.center,
           ),
+          if (isSubSelected && _selectedCategoryId != null) ...[
+            const SizedBox(height: defaultPadding),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _selectedSubCategoryId = null;
+                });
+                _productController.showAllProductsForCategory();
+              },
+              child: const Text('View all in this category'),
+            ),
+          ],
         ],
       ),
     );

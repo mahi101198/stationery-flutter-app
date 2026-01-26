@@ -16,9 +16,9 @@ class TTexts {
   static const String onBoardingTitle2 = "Add to the cart";
   static const String onBoardingTitle3 = "Get it delivered at your doorstep";
 
-  static const String onBoardingSubTitle1 = "Explore a wide range of premium stationery essentials, from pens to planners, all at your fingertips.";
+  static const String onBoardingSubTitle1 = "Explore a wide range of premium products, from pens to planners, all at your fingertips.";
   static const String onBoardingSubTitle2 = "Found your favorites? Add them to your cart in seconds and keep your creative journey going without missing a beat.";
-  static const String onBoardingSubTitle3 = "Sit back and relax while we deliver top-quality stationery straight to your doorstep—quick, convenient, and hassle-free";
+  static const String onBoardingSubTitle3 = "Sit back and relax while we deliver top-quality products straight to your doorstep—quick, convenient, and hassle-free";
 
 
   // -- Authentication Forms

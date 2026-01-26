@@ -140,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     const SizedBox(width: 12),
                                     // App Name
                                     Text(
-                                      'RPS STATIONARY',
+                                      'RPS STATIONERY',
                                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                         color: Theme.of(context).colorScheme.onSurface,
                                         fontWeight: FontWeight.bold,

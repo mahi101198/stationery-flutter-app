@@ -62,18 +62,21 @@ class _AboutAppScreenState extends State<AboutAppScreen> {
                 title: "Legal Documents",
                 items: [
                   _SettingsItem(
+                    null,
                     icon: Iconsax.document_text,
                     title: "Terms & Conditions",
                     subtitle: "Read our terms of service",
                     onTap: () => Get.to(() => const TermsConditionsScreen()),
                   ),
                   _SettingsItem(
+                    null,
                     icon: Iconsax.shield_tick,
                     title: "Privacy Policy",
                     subtitle: "How we protect your data",
                     onTap: () => Get.to(() => const PrivacyPolicyScreen()),
                   ),
                   _SettingsItem(
+                    null,
                     icon: Iconsax.money_send,
                     title: "Refund Policy",
                     subtitle: "Our refund and return policy",
@@ -90,18 +93,21 @@ class _AboutAppScreenState extends State<AboutAppScreen> {
                 title: "App Information",
                 items: [
                   _SettingsItem(
+                    null,
                     icon: Iconsax.info_circle,
                     title: "Version",
                     subtitle: "v$appVersion (Build $buildNumber)",
                     onTap: () {},
                   ),
                   _SettingsItem(
+                    null,
                     icon: Iconsax.calendar,
                     title: "Last Updated",
                     subtitle: "December 2024",
                     onTap: () {},
                   ),
                   _SettingsItem(
+                    null,
                     icon: Iconsax.code,
                     title: "Developer",
                     subtitle: "RPS Stationery Team",
@@ -313,11 +319,10 @@ class _SettingsItem {
   final VoidCallback onTap;
   final Widget? customTrailing;
 
-  _SettingsItem({
+  _SettingsItem(this.customTrailing, {
     required this.icon,
     required this.title,
     this.subtitle,
     required this.onTap,
-    this.customTrailing,
   });
 }

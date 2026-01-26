@@ -55,35 +55,27 @@ class _BannerCarouselState extends State<BannerCarousel> {
 
   void _startAutoScroll() {
     timer?.cancel();
-    
-    // Comprehensive null and empty checks
     if (controller.banners.isEmpty || controller.banners.length <= 1) {
-      print('⚠️ BannerCarousel: Not starting auto-scroll - insufficient banners (${controller.banners.length})');
       return;
     }
-    
-    // Additional safety check
     if (!mounted) return;
-    
-    timer = Timer.periodic(const Duration(seconds: 5), (timer) { // Slower interval
-      // Double-check in the timer callback
+    final currentIndex = controller.selectedIndex.value;
+    final seconds = controller.banners[currentIndex].viewChangeTimeSeconds;
+    final ms = (seconds * 1000).round();
+    timer = Timer(Duration(milliseconds: ms), () {
       if (!mounted || controller.banners.isEmpty || controller.banners.length <= 1) {
-        timer.cancel();
         return;
       }
-      
       final nextPage = (controller.selectedIndex.value + 1) % controller.banners.length;
-      
-      // Only update if page controller is ready and mounted
       if (pageController.hasClients && mounted) {
         pageController.animateToPage(
           nextPage,
-          duration: const Duration(milliseconds: 300), // Faster animation
-          curve: Curves.easeOut, // Simpler curve for better performance
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
         ).then((_) {
-          // Update controller after animation completes
           if (mounted) {
             controller.selectedIndex.value = nextPage;
+            _startAutoScroll();
           }
         });
       }
@@ -140,50 +132,6 @@ class _BannerCarouselState extends State<BannerCarousel> {
                             },
                           ),
                         ),
-                      // Modern dot indicators - Centered bottom
-                      Positioned(
-                        bottom: 12,
-                        left: 0,
-                        right: 0,
-                        child: Center(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.25),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: List.generate(
-                                    controller.banners.length,
-                                    (index) => Obx(
-                                      () => AnimatedContainer(
-                                        duration: const Duration(milliseconds: 300),
-                                        width: index == controller.selectedIndex.value ? 24 : 6,
-                                        height: 6,
-                                        margin: EdgeInsets.only(right: index == controller.banners.length - 1 ? 0 : 4),
-                                        decoration: BoxDecoration(
-                                          color: index == controller.selectedIndex.value
-                                              ? Colors.white
-                                              : Colors.white.withValues(alpha: 0.4),
-                                          borderRadius: BorderRadius.circular(3),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                       ),
                     ),

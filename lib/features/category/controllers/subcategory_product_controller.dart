@@ -105,6 +105,9 @@ class SubCategoryProductController extends GetxController {
     
     _products.assignAll(filteredProducts);
     _resetPagination();
+    if (filteredProducts.isEmpty) {
+      _hasMoreData.value = false;
+    }
     
     print('✅ SubCategoryProductController: Filtered to ${filteredProducts.length} products for subcategory $subCategoryId');
   }

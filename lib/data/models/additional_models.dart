@@ -428,6 +428,7 @@ class BannerModel {
   final int priority;
   final DateTime validFrom;
   final DateTime validTill;
+  final double viewChangeTimeSeconds;
   
   // Compatibility getter
   String get image => imageUrl;
@@ -440,6 +441,7 @@ class BannerModel {
     required this.priority,
     required this.validFrom,
     required this.validTill,
+    this.viewChangeTimeSeconds = 0.5,
   });
 
   /// Check if banner is currently valid
@@ -458,6 +460,7 @@ class BannerModel {
       'priority': priority,
       'validFrom': Timestamp.fromDate(validFrom),
       'validTill': Timestamp.fromDate(validTill),
+      'view_change_time': viewChangeTimeSeconds,
     };
   }
 
@@ -473,6 +476,7 @@ class BannerModel {
       priority: (data['priority'] ?? 0).toInt(),
       validFrom: _parseTimestamp(data['validFrom']),
       validTill: _parseTimestamp(data['validTill']),
+      viewChangeTimeSeconds: _parseDuration(data['view_change_time'], 0.5),
     );
   }
 
@@ -487,6 +491,21 @@ class BannerModel {
     }
     
     return DateTime.now();
+  }
+
+  static double _parseDuration(dynamic value, double fallback) {
+    if (value == null) return fallback;
+    if (value is num) {
+      final v = value.toDouble();
+      if (v <= 0) return fallback;
+      return v;
+    }
+    if (value is String) {
+      final parsed = double.tryParse(value);
+      if (parsed == null || parsed <= 0) return fallback;
+      return parsed;
+    }
+    return fallback;
   }
 
   @override

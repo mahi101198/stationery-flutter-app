@@ -1,0 +1,9 @@
+{
+  "projects": {
+    "iam apis": "rps-statationary-jaipur",
+    "rps": "rps-statationary-jaipur",
+    "default": "rps-statationary-jaipur"
+  },
+  "targets": {},
+  "etags": {}
+}

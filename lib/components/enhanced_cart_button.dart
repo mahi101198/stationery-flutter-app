@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:rps_stationery/utils/helpers/helper_functions.dart';
 import 'package:rps_stationery/routes/app_pages.dart';
 import 'package:rps_stationery/data/models/product_model.dart';
 import 'package:rps_stationery/features/cart/controllers/cart_controller.dart';
