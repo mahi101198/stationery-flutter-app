@@ -56,47 +56,49 @@ class VariantSelector extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   
-                  // Attribute values as chips
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: values.map((value) {
-                      final isSelected = selectedAttributes[attributeName] == value;
-                      
-                      return ChoiceChip(
-                        label: Text(
-                          _formatAttributeValue(value),
-                          style: TextStyle(
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                            fontSize: 14,
+                  // Attribute values as chips - Single Row with Horizontal Scrolling
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      spacing: 8,
+                      children: values.map((value) {
+                        final isSelected = selectedAttributes[attributeName] == value;
+                        
+                        return ChoiceChip(
+                          label: Text(
+                            _formatAttributeValue(value),
+                            style: TextStyle(
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                              fontSize: 14,
+                            ),
                           ),
-                        ),
-                        selected: isSelected,
-                        onSelected: (_) => onAttributeSelected(attributeName, value),
-                        selectedColor: Theme.of(context).colorScheme.primary,
-                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        labelStyle: TextStyle(
-                          color: isSelected 
-                              ? Theme.of(context).colorScheme.onPrimary
-                              : Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color: isSelected
-                                ? Theme.of(context).colorScheme.primary
-                                : Colors.transparent,
-                            width: 2,
+                          selected: isSelected,
+                          onSelected: (_) => onAttributeSelected(attributeName, value),
+                          selectedColor: Theme.of(context).colorScheme.primary,
+                          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                          labelStyle: TextStyle(
+                            color: isSelected 
+                                ? Theme.of(context).colorScheme.onPrimary
+                                : Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        elevation: isSelected ? 2 : 0,
-                        pressElevation: 4,
-                      );
-                    }).toList(),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          elevation: isSelected ? 2 : 0,
+                          pressElevation: 4,
+                        );
+                      }).toList(),
+                    ),
                   ),
                 ],
               ),

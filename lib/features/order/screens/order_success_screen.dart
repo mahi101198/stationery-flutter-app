@@ -538,34 +538,44 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
     );
   }
 
-  /// Get total amount from order data (amountBreakdown) or fallback to arguments
-  /// Always shows totalOrderAmount (total order value) for all payment methods
+  /// Get total amount from order data (paymentSummary) or fallback to arguments
+  /// Always shows totalOrderValue (total order value) for all payment methods
   String _getTotalAmount() {
-    // First try to get from order data (amountBreakdown)
+    // First try to get from order data (new schema: paymentSummary)
     if (_orderData != null) {
-      final amountBreakdown = _orderData!['amountBreakdown'] as Map<String, dynamic>?;
-      if (amountBreakdown != null) {
-        // For ALL payment methods, show the total order amount (subtotal + delivery - discount)
-        // This is the total value of the order that the user paid for
+      final paymentSummary = _orderData!['paymentSummary'];
+      // Check if paymentSummary is actually a Map before casting
+      if (paymentSummary is Map<String, dynamic>) {
+        // For ALL payment methods, show the total order amount
         try {
-          final totalOrderAmountRaw = amountBreakdown['totalOrderAmount'];
-          final totalOrderAmount = _safeToDouble(totalOrderAmountRaw);
-          if (totalOrderAmount != null && totalOrderAmount > 0) {
-            print('💰 OrderSuccessScreen: Showing totalOrderAmount: ₹$totalOrderAmount');
-            return '₹${totalOrderAmount.toStringAsFixed(2)}';
+          final totalOrderValueRaw = paymentSummary['totalOrderValue'];
+          final totalOrderValue = _safeToDouble(totalOrderValueRaw);
+          if (totalOrderValue != null && totalOrderValue > 0) {
+            print('💰 OrderSuccessScreen: Showing totalOrderValue: ₹$totalOrderValue');
+            return '₹${totalOrderValue.toStringAsFixed(2)}';
           }
         } catch (e) {
-          print('Error getting totalOrderAmount: $e');
+          print('Error getting totalOrderValue: $e');
         }
+      } else if (paymentSummary != null) {
+        print('⚠️ OrderSuccessScreen: paymentSummary is not a Map, it is: ${paymentSummary.runtimeType}');
       }
     }
     
     // Fallback to arguments amount
-    final arguments = Get.arguments as Map<String, dynamic>?;
-    final amount = arguments?['amount'] ?? widget.amount;
-    if (amount != null && amount > 0) {
-      print('💰 OrderSuccessScreen: Using fallback amount from arguments: ₹$amount');
-      return '₹${amount.toStringAsFixed(2)}';
+    final arguments = Get.arguments;
+    if (arguments is Map<String, dynamic>) {
+      final amount = arguments['amount'] ?? widget.amount;
+      if (amount != null && amount > 0) {
+        print('💰 OrderSuccessScreen: Using fallback amount from arguments: ₹$amount');
+        return '₹${amount.toStringAsFixed(2)}';
+      }
+    }
+    
+    // Fallback to widget amount
+    if (widget.amount != null && widget.amount! > 0) {
+      print('💰 OrderSuccessScreen: Using widget amount: ₹${widget.amount}');
+      return '₹${widget.amount!.toStringAsFixed(2)}';
     }
     
     // Final fallback
@@ -640,42 +650,45 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
 
   /// Get wallet deduction amount
   String _getWalletDeductionAmount() {
-    // First try to get from order data (amountBreakdown)
+    // First try to get from order data (new schema: paymentSummary)
     if (_orderData != null) {
-      final amountBreakdown = _orderData!['amountBreakdown'] as Map<String, dynamic>?;
-      if (amountBreakdown != null) {
+      final paymentSummary = _orderData!['paymentSummary'];
+      // Check if paymentSummary is actually a Map before accessing
+      if (paymentSummary is Map<String, dynamic>) {
         // For full wallet payment, show the total order amount
         final paymentMode = _orderData!['paymentMode'] as String?;
         if (paymentMode == 'wallet') {
           try {
-            final totalOrderAmountRaw = amountBreakdown['totalOrderAmount'];
-            final totalOrderAmount = _safeToDouble(totalOrderAmountRaw);
-            if (totalOrderAmount != null && totalOrderAmount > 0) {
-              return '₹${totalOrderAmount.toStringAsFixed(2)}';
+            final totalOrderValueRaw = paymentSummary['totalOrderValue'];
+            final totalOrderValue = _safeToDouble(totalOrderValueRaw);
+            if (totalOrderValue != null && totalOrderValue > 0) {
+              return '₹${totalOrderValue.toStringAsFixed(2)}';
             }
           } catch (e) {
-            print('Error getting totalOrderAmount for wallet deduction: $e');
+            print('Error getting totalOrderValue for wallet deduction: $e');
           }
         } else if (paymentMode == 'partial_wallet') {
           // For partial wallet payment, show the wallet amount used
           try {
-            final walletUsedRaw = amountBreakdown['walletUsed'];
-            final walletUsed = _safeToDouble(walletUsedRaw);
-            if (walletUsed != null && walletUsed > 0) {
-              return '₹${walletUsed.toStringAsFixed(2)}';
+            final walletPaidAmountRaw = paymentSummary['walletPaidAmount'];
+            final walletPaidAmount = _safeToDouble(walletPaidAmountRaw);
+            if (walletPaidAmount != null && walletPaidAmount > 0) {
+              return '₹${walletPaidAmount.toStringAsFixed(2)}';
             }
           } catch (e) {
-            print('Error getting walletUsed for partial wallet deduction: $e');
+            print('Error getting walletPaidAmount for partial wallet deduction: $e');
           }
         }
       }
     }
     
     // Fallback to arguments
-    final arguments = Get.arguments as Map<String, dynamic>?;
-    final amountPaid = arguments?['amountPaid'] as double?;
-    if (amountPaid != null && amountPaid > 0) {
-      return '₹${amountPaid.toStringAsFixed(2)}';
+    final arguments = Get.arguments;
+    if (arguments is Map<String, dynamic>) {
+      final amountPaid = arguments['amountPaid'] as double?;
+      if (amountPaid != null && amountPaid > 0) {
+        return '₹${amountPaid.toStringAsFixed(2)}';
+      }
     }
     
     // Final fallback

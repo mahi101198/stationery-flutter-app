@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:rps_stationery/features/product/controllers/product_detail_controller.dart';
 
 /// Quantity selector with +/- buttons
-/// Matches mockup design with circular buttons
+/// Matches mockup design with circular buttons - Now reactive
 class MinimalQuantitySelector extends StatelessWidget {
-  final int quantity;
   final int maxQuantity;
   final Function() onIncrement;
   final Function() onDecrement;
 
   const MinimalQuantitySelector({
     super.key,
-    required this.quantity,
     required this.maxQuantity,
     required this.onIncrement,
     required this.onDecrement,
@@ -18,6 +18,8 @@ class MinimalQuantitySelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controller = ProductDetailController.instance;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -37,42 +39,51 @@ class MinimalQuantitySelector extends StatelessWidget {
         Row(
           children: [
             // Minus Button
-            _buildButton(
-              context,
-              icon: Icons.remove,
-              onTap: quantity > 1 ? onDecrement : null,
-            ),
+            Obx(() {
+              final quantity = controller.quantity.value;
+              return _buildButton(
+                context,
+                icon: Icons.remove,
+                onTap: quantity > 1 ? onDecrement : null,
+              );
+            }),
             const SizedBox(width: 16),
             
-            // Count Display
-            TweenAnimationBuilder<int>(
-              duration: const Duration(milliseconds: 150),
-              curve: Curves.easeOut,
-              tween: IntTween(begin: quantity, end: quantity),
-              builder: (context, value, child) {
-                return Text(
-                  '$value',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                );
-              },
-            ),
+            // Count Display - Only this part is reactive
+            Obx(() {
+              final quantity = controller.quantity.value;
+              return TweenAnimationBuilder<int>(
+                duration: const Duration(milliseconds: 150),
+                curve: Curves.easeOut,
+                tween: IntTween(begin: quantity, end: quantity),
+                builder: (context, value, child) {
+                  return Text(
+                    '$value',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  );
+                },
+              );
+            }),
             const SizedBox(width: 16),
             
             // Plus Button
-            _buildButton(
-              context,
-              icon: Icons.add,
-              onTap: quantity < maxQuantity ? onIncrement : null,
-            ),
+            Obx(() {
+              final quantity = controller.quantity.value;
+              return _buildButton(
+                context,
+                icon: Icons.add,
+                onTap: quantity < maxQuantity ? onIncrement : null,
+              );
+            }),
           ],
         ),
         const SizedBox(height: 8),
         
-        // Limit Text
+        // Limit Text (static)
         Text(
           'Maximum $maxQuantity units per order',
           style: TextStyle(

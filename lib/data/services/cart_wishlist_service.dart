@@ -257,24 +257,76 @@ class CartWishlistService extends GetxController {
 
       List<CartItem> updatedItems;
       
+      // Extract comprehensive product + SKU information for cart storage
+      print('🔍 Extracting product + SKU information for comprehensive cart storage...');
+      
+      String baseProductId = productId;
+      String skuId = productId;
+      String title = 'Unknown Product';
+      String subtitle = '';
+      String imageUrl = '';
+      double price = 0.0;
+      double mrp = 0.0;
+      String currency = 'INR';
+      
+      if (productContext != null) {
+        // We have the full product context, extract comprehensive data
+        baseProductId = productContext.productId;
+        title = productContext.title ?? productContext.name ?? 'Unknown Product';
+        subtitle = productContext.subtitle ?? '';
+        imageUrl = productContext.displayImage ?? '';
+        
+        // Find matching SKU for pricing
+        final matchingSku = productContext.productSkus.firstWhereOrNull(
+          (sku) => sku.skuId == productId
+        );
+        
+        if (matchingSku != null) {
+          price = matchingSku.price.toDouble();
+          mrp = matchingSku.mrp?.toDouble() ?? matchingSku.price.toDouble();
+          currency = 'INR'; // Default currency
+          print('✅ Found matching SKU pricing: Price=₹$price, MRP=₹$mrp');
+        } else {
+          // Fallback to product-level pricing
+          price = productContext.price.toDouble();
+          mrp = price; // Use price as MRP if no specific MRP
+          print('⚠️  No matching SKU found, using product-level price: ₹$price');
+        }
+        
+        print('✅ Product context extracted:');
+        print('   ProductID: $baseProductId');
+        print('   SKU: $skuId');
+        print('   Title: $title');
+        print('   Price: ₹$price, MRP: ₹$mrp');
+      } else {
+        print('⚠️  No product context provided - using minimal cart item');
+      }
+      
       if (cart == null) {
-        // Create new cart with first item
+        // Create new cart with first item using comprehensive data
         updatedItems = [
           CartItem(
-            productId: productId,
+            productId: baseProductId,
+            skuId: skuId,
+            title: title,
+            subtitle: subtitle,
+            imageUrl: imageUrl,
+            price: price,
+            mrp: mrp,
+            currency: currency,
             quantity: quantity,
             addedAt: now,
             selectedColor: selectedColor,
           ),
         ];
-        print('➕ Creating new cart with 1 item');
+        print('➕ Creating new cart with 1 comprehensive item');
       } else {
         // Update existing cart
         updatedItems = List.from(cart.items);
         
         // Check if item already exists
         final existingItemIndex = updatedItems.indexWhere(
-          (item) => item.productId == productId,
+          (item) => item.productId == baseProductId,
         );
         
         if (existingItemIndex != -1) {
@@ -286,16 +338,23 @@ class CartWishlistService extends GetxController {
               );
           print('🔄 Updated existing item quantity');
         } else {
-          // Add new item
+          // Add new item to existing cart
           updatedItems.add(
             CartItem(
-              productId: productId,
+              productId: baseProductId,
+              skuId: skuId,
+              title: title,
+              subtitle: subtitle,
+              imageUrl: imageUrl,
+              price: price,
+              mrp: mrp,
+              currency: currency,
               quantity: quantity,
               addedAt: now,
               selectedColor: selectedColor,
             ),
           );
-          print('➕ Added new item to existing cart');
+          print('➕ Added comprehensive cart item with product+SKU data');
         }
       }
 

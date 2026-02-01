@@ -354,7 +354,7 @@ class ProductCacheService extends GetxController {
       }
 
       // Build CartModel from local CartItem entities
-      final items = cartItems.map((ci) => cart_models.CartItem(
+      final items = cartItems.map((ci) => cart_models.CartItem.minimal(
             productId: ci.productId,
             quantity: ci.quantity,
             addedAt: DateTime.now(),
@@ -598,19 +598,21 @@ class ProductCacheService extends GetxController {
           if (!remoteDoc.exists && productId.contains('-')) {
             print('⚠️ Direct lookup failed for $productId, trying base product ID extraction...');
             
-            // Extract base product ID (everything before the last hyphen-number pattern)
-            // Examples: "scale-infinity-small-4pt8in" → "scale-infinity-small"
-            //           "pen-ball-balaji-20pack" → "pen-ball-balaji"
+            // Extract base product ID by removing the last part (SKU variant)
+            // Examples: 
+            //   "stapler-kangaro-hd10d-standard" → "stapler-kangaro-hd10d"
+            //   "pen-ball-balaji-20pack" → "pen-ball-balaji"
+            //   "scale-infinity-small-4pt8in" → "scale-infinity-small"
             final parts = productId.split('-');
             
-            // Find where the SKU variant starts (usually last 1-2 parts with numbers)
-            String baseProductId = productId;
-            
-            // Try removing last part if it looks like a variant (contains numbers/letters mixed)
-            if (parts.isNotEmpty) {
-              final lastPart = parts.last;
-              if (lastPart.contains(RegExp(r'\d'))) {
-                baseProductId = parts.sublist(0, parts.length - 1).join('-');
+            if (parts.length > 1) {
+              // Common SKU variant suffixes to remove
+              final commonVariants = ['standard', 'premium', 'deluxe', 'basic', 'pro', 'lite'];
+              final lastPart = parts.last.toLowerCase();
+              
+              // Remove last part if it's a common variant OR contains numbers (likely a variant)
+              if (commonVariants.contains(lastPart) || lastPart.contains(RegExp(r'\d'))) {
+                final baseProductId = parts.sublist(0, parts.length - 1).join('-');
                 print('   Trying base product ID: $baseProductId');
                 remoteDoc = await _firestore.collection('product_details').doc(baseProductId).get();
               }

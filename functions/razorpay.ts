@@ -59,10 +59,10 @@ function getConfig() {
  * 
  * Required Payload Structure:
  * {
- *   items: Array<{productId, name, price, quantity, productImage?, category?, brand?}>,
- *   amountSummary: {subTotal, discount, walletUsed, deliveryFee, finalPayable},
+ *   items: Array<{productId, skuId, name, price, quantity, productImage?, category?, brand?, productBasePrice?, productCurrentPrice?, itemSubtotal?, itemDiscount?, variants?}>,
+ *   pricingSummary: {orderSubtotal, productDiscount, couponCode, couponDiscount, totalDiscount, subtotalAfterDiscount, deliveryFee, totalBeforePayment},
+ *   paymentSummary: {paymentMode, walletPaidAmount, onlinePaidAmount, totalOrderValue},
  *   paymentMode: 'razorpay'|'cod'|'wallet'|'partial_wallet',
- *   couponCode?: string,
  *   deliveryAddress: {id, name, phoneNumber, street, city, state, postalCode, country},
  *   paymentDetails?: {gateway, transactionId?, status?},
  *   currency?: string (default: 'INR')
@@ -85,9 +85,9 @@ export const createOrder = onCall(
       // Extract data from comprehensive payload
       const {
         items,
-        amountSummary,           // Comprehensive price breakdown
+        pricingSummary,          // Pricing breakdown: orderSubtotal, productDiscount, couponCode, couponDiscount, totalDiscount, subtotalAfterDiscount, deliveryFee, totalBeforePayment
+        paymentSummary,          // Payment breakdown: paymentMode, walletPaidAmount, onlinePaidAmount, totalOrderValue
         paymentMode,
-        couponCode,              // Coupon code
         deliveryAddress,
         paymentDetails,          // Payment details object
         currency = 'INR'
@@ -109,77 +109,146 @@ export const createOrder = onCall(
         !deliveryAddress.city || !deliveryAddress.state || !deliveryAddress.postalCode || !deliveryAddress.country) {
         throw new Error('Delivery address must include: name, phoneNumber, street, city, state, postalCode, country');
       }
-      if (!amountSummary) {
-        throw new Error('amountSummary is required');
+      if (!pricingSummary) {
+        throw new Error('pricingSummary is required');
+      }
+      if (!paymentSummary) {
+        throw new Error('paymentSummary is required');
       }
 
-      // Extract and validate comprehensive amount breakdown
-      const subTotal = amountSummary.subTotal || 0;
-      const discountAmount = amountSummary.discount || 0;
-      const walletAmountUsed = amountSummary.walletUsed || 0;
-      const deliveryFee = amountSummary.deliveryFee || 0;
-      const finalAmount = amountSummary.finalPayable || 0;
-      const totalOrderAmount = amountSummary.totalOrderAmount || 0;
+      // Extract pricing summary (properly named fields)
+      const orderSubtotal = pricingSummary.orderSubtotal || 0;
+      const productDiscount = pricingSummary.productDiscount || 0;
+      const couponCode = pricingSummary.couponCode || null;
+      const couponDiscount = pricingSummary.couponDiscount || 0;
+      const totalDiscount = pricingSummary.totalDiscount || 0;
+      const subtotalAfterDiscount = pricingSummary.subtotalAfterDiscount || 0;
+      const deliveryFee = pricingSummary.deliveryFee || 0;
+      const totalBeforePayment = pricingSummary.totalBeforePayment || 0;
 
-      // Validate comprehensive amounts
-      if (subTotal <= 0) {
-        throw new Error('Subtotal must be greater than 0');
+      // Extract payment summary (properly named fields)
+      const walletPaidAmount = paymentSummary.walletPaidAmount || 0;
+      const onlinePaidAmount = paymentSummary.onlinePaidAmount || 0;
+      const totalOrderValue = paymentSummary.totalOrderValue || 0;
+
+      // For backward compatibility, calculate these variables
+      const discountAmount = totalDiscount;
+      const walletAmountUsed = walletPaidAmount;
+      const finalAmount = onlinePaidAmount;
+
+      // Validate pricing amounts
+      if (orderSubtotal <= 0) {
+        throw new Error('Order subtotal must be greater than 0');
       }
-      if (finalAmount < 0) {
-        throw new Error('Final payable amount cannot be negative');
-      }
-      if (walletAmountUsed < 0) {
-        throw new Error('Wallet amount used cannot be negative');
-      }
-      if (discountAmount < 0) {
-        throw new Error('Discount amount cannot be negative');
+      if (totalDiscount < 0) {
+        throw new Error('Total discount cannot be negative');
       }
       if (deliveryFee < 0) {
         throw new Error('Delivery fee cannot be negative');
       }
-      if (totalOrderAmount <= 0) {
-        throw new Error('Total order amount must be greater than 0');
+      if (totalOrderValue <= 0) {
+        throw new Error('Total order value must be greater than 0');
+      }
+
+      // ✅ VALIDATE PRICING FORMULAS (MRP-based, no double-counting)
+      // Validate that subtotalAfterDiscount is calculated correctly
+      const expectedSubtotalAfterDiscount = orderSubtotal - totalDiscount;
+      if (Math.abs(subtotalAfterDiscount - expectedSubtotalAfterDiscount) > 0.01) {
+        throw new Error(`subtotalAfterDiscount calculation error: expected ${expectedSubtotalAfterDiscount}, got ${subtotalAfterDiscount}`);
+      }
+
+      // Validate that totalBeforePayment is calculated correctly
+      const expectedTotalBeforePayment = subtotalAfterDiscount + deliveryFee;
+      if (Math.abs(totalBeforePayment - expectedTotalBeforePayment) > 0.01) {
+        throw new Error(`totalBeforePayment calculation error: expected ${expectedTotalBeforePayment}, got ${totalBeforePayment}`);
+      }
+
+      // Validate that totalOrderValue matches totalBeforePayment
+      if (Math.abs(totalOrderValue - totalBeforePayment) > 0.01) {
+        throw new Error(`totalOrderValue does not match totalBeforePayment: ${totalOrderValue} vs ${totalBeforePayment}`);
+      }
+
+      // Validate that productDiscount + couponDiscount = totalDiscount
+      const expectedTotalDiscount = productDiscount + couponDiscount;
+      if (Math.abs(totalDiscount - expectedTotalDiscount) > 0.01) {
+        throw new Error(`totalDiscount calculation error: productDiscount(${productDiscount}) + couponDiscount(${couponDiscount}) = ${expectedTotalDiscount}, but got ${totalDiscount}`);
+      }
+
+      console.log('✅ Pricing formula validation passed:');
+      console.log('   orderSubtotal (MRP) = ₹' + orderSubtotal);
+      console.log('   - productDiscount = ₹' + productDiscount);
+      console.log('   - couponDiscount = ₹' + couponDiscount);
+      console.log('   = subtotalAfterDiscount = ₹' + subtotalAfterDiscount);
+      console.log('   + deliveryFee = ₹' + deliveryFee);
+      console.log('   = totalBeforePayment = ₹' + totalBeforePayment);
+      console.log('   = totalOrderValue = ₹' + totalOrderValue);
+
+      // Validate payment amounts
+      if (walletPaidAmount < 0) {
+        throw new Error('Wallet paid amount cannot be negative');
+      }
+      if (onlinePaidAmount < 0) {
+        throw new Error('Online paid amount cannot be negative');
+      }
+
+      // Validate payment mode consistency
+      if (paymentMode === 'wallet' && walletPaidAmount <= 0) {
+        throw new Error('Wallet amount must be positive for wallet payment mode');
+      }
+      if (paymentMode === 'wallet' && onlinePaidAmount !== 0) {
+        throw new Error('Online amount must be 0 for wallet-only payment');
+      }
+      if (paymentMode === 'cod' && walletPaidAmount !== 0) {
+        throw new Error('Wallet amount must be 0 for COD payment');
       }
 
       // Double-check validation for partial wallet payments
       if (paymentMode === 'partial_wallet') {
         // Validate wallet amount
-        if (walletAmountUsed <= 0) {
+        if (walletPaidAmount <= 0) {
           throw new Error('Valid wallet amount is required for partial wallet payment');
         }
-
-        // Validate final payable amount consistency
-        // Formula: finalPayable = subTotal + deliveryFee - discount - walletUsed
-        const expectedFinalAmount = subTotal + deliveryFee - discountAmount - walletAmountUsed;
-        if (Math.abs(finalAmount - expectedFinalAmount) > 0.01) {
-          throw new Error(`Final payable amount (${finalAmount}) does not match expected amount (${expectedFinalAmount}). Breakdown: subTotal(${subTotal}) + delivery(${deliveryFee}) - discount(${discountAmount}) - wallet(${walletAmountUsed})`);
+        if (onlinePaidAmount <= 0) {
+          throw new Error('Valid online amount is required for partial wallet payment');
         }
 
-        // Validate that wallet amount doesn't exceed the order total after discount
-        const totalAfterDiscount = subTotal + deliveryFee - discountAmount;
-        if (walletAmountUsed >= totalAfterDiscount) {
-          throw new Error(`Wallet amount (${walletAmountUsed}) must be less than total after discount (${totalAfterDiscount}) for partial payment`);
+        // Validate total matches
+        const expectedTotal = walletPaidAmount + onlinePaidAmount;
+        if (Math.abs(totalOrderValue - expectedTotal) > 0.01) {
+          throw new Error(`Total order value (${totalOrderValue}) does not match wallet (${walletPaidAmount}) + online (${onlinePaidAmount}) = ${expectedTotal}`);
         }
 
         console.log('✅ Partial wallet validation passed:', {
-          subTotal,
+          orderSubtotal,
           deliveryFee,
-          discount: discountAmount,
-          walletUsed: walletAmountUsed,
-          finalPayable: finalAmount,
-          expectedFinalAmount
+          totalDiscount,
+          walletPaidAmount,
+          onlinePaidAmount,
+          totalOrderValue
         });
+      }
+
+      // Validate Razorpay and COD modes have correct amounts
+      if ((paymentMode === 'razorpay' || paymentMode === 'cod') && walletPaidAmount !== 0) {
+        throw new Error(`Wallet amount must be 0 for ${paymentMode} payment`);
       }
 
       console.log('🔍 Firebase Function: Creating order for user:', userId);
       console.log('🔍 Firebase Function: Payment mode:', paymentMode);
-      console.log('💰 Amount Summary:', {
-        subTotal,
-        discount: discountAmount,
-        walletUsed: walletAmountUsed,
+      console.log('💰 Pricing Summary:', {
+        orderSubtotal,
+        productDiscount,
+        couponDiscount,
+        totalDiscount,
+        subtotalAfterDiscount,
         deliveryFee,
-        finalPayable: finalAmount,
-        totalOrderAmount
+        totalBeforePayment
+      });
+      console.log('💳 Payment Summary:', {
+        paymentMode,
+        walletPaidAmount,
+        onlinePaidAmount,
+        totalOrderValue
       });
 
       // Generate IDs
@@ -222,7 +291,7 @@ export const createOrder = onCall(
           await handleWalletPayment(orderId, userId, paymentId, finalAmount, currency, walletAmountUsed);
           break;
         case 'partial_wallet':
-          razorpayOrderId = await handlePartialWalletPayment(orderId, userId, paymentId, totalOrderAmount, currency, walletAmountUsed);
+          razorpayOrderId = await handlePartialWalletPayment(orderId, userId, paymentId, totalOrderValue, currency, walletAmountUsed);
           break;
         default:
           throw new Error(`Invalid payment mode: ${paymentMode}. Supported modes: razorpay, cod, wallet, partial_wallet`);
@@ -255,10 +324,10 @@ export const createOrder = onCall(
         if ((paymentMode === 'razorpay' || paymentMode === 'partial_wallet') && razorpayOrderId) {
           const razorpayOrderRef = db.collection('razorpay_orders').doc(razorpayOrderId);
 
-          // Calculate amount for razorpay_orders (full amount for razorpay, remaining amount for partial_wallet)
-          const razorpayAmount = paymentMode === 'partial_wallet'
-            ? Math.round(finalAmount * 100) // finalAmount is already the remaining amount after wallet deduction
-            : Math.round(finalAmount * 100);
+          // Calculate amount for razorpay_orders
+          // For razorpay: use onlinePaidAmount
+          // For partial_wallet: use onlinePaidAmount (already the remaining after wallet deduction)
+          const razorpayAmount = Math.round(onlinePaidAmount * 100);
 
           transaction.set(razorpayOrderRef, {
             razorpayOrderId,
@@ -272,8 +341,8 @@ export const createOrder = onCall(
             deliveryId,
             // Additional fields for partial wallet
             isPartialWalletPayment: paymentMode === 'partial_wallet',
-            walletAmount: paymentMode === 'partial_wallet' ? walletAmountUsed : null,
-            totalAmount: paymentMode === 'partial_wallet' ? totalOrderAmount : null,
+            walletAmount: paymentMode === 'partial_wallet' ? walletPaidAmount : null,
+            totalAmount: paymentMode === 'partial_wallet' ? totalOrderValue : null,
           });
           console.log('✅ Created razorpay_orders document for', paymentMode);
         } else {
@@ -293,14 +362,24 @@ export const createOrder = onCall(
           createdAt: now,
           updatedAt: now,
 
-          // Comprehensive amount breakdown
-          amountBreakdown: {
-            subTotal,
-            discount: discountAmount,
+          // Pricing breakdown with proper field names
+          pricingSummary: {
+            orderSubtotal,
+            productDiscount,
+            couponCode,
+            couponDiscount,
+            totalDiscount,
+            subtotalAfterDiscount,
             deliveryFee,
-            walletUsed: walletAmountUsed,
-            finalAmount: finalAmount,
-            totalOrderAmount
+            totalBeforePayment
+          },
+
+          // Payment breakdown with proper field names
+          paymentSummary: {
+            paymentMode,
+            walletPaidAmount,
+            onlinePaidAmount,
+            totalOrderValue
           },
 
           // Payment details (from payload or defaults)
@@ -314,15 +393,15 @@ export const createOrder = onCall(
           // Coupon information
           couponInfo: couponCode ? {
             code: couponCode,
-            discountApplied: discountAmount,
+            discountApplied: couponDiscount,
             appliedAt: now
           } : null,
 
           // Wallet information
           walletInfo: (isWalletFull || isWalletPartial) ? {
-            amountUsed: walletAmountUsed,
+            amountUsed: walletPaidAmount,
             isPartialPayment: isWalletPartial,
-            remainingAmount: isWalletPartial ? finalAmount : 0, // finalAmount is already the remaining amount
+            remainingAmount: isWalletPartial ? onlinePaidAmount : 0,
             paymentMethod: isWalletPartial ? 'razorpay' : null // Partial wallet uses Razorpay for remaining
           } : null
         };
@@ -347,37 +426,57 @@ export const createOrder = onCall(
           createdAt: now,
           updatedAt: now,
 
-          // Comprehensive item details
+          // Comprehensive item details with all product information
           items: items.map((item: any) => ({
+            // Basic product information
             productId: item.productId,
+            skuId: item.skuId || item.productId, // ✅ SKU ID separate from Product ID
             name: item.name,
-            price: item.price,
             quantity: item.quantity,
-            subtotal: item.price * item.quantity,
             productImage: item.productImage || null,
-            discountPrice: item.discountPrice || item.price,
-            totalPrice: (item.discountPrice || item.price) * item.quantity,
-            // Additional item metadata
+
+            // Pricing information (MRP-based, correct fields)
+            productBasePrice: item.productBasePrice || item.price, // ✅ MRP (base price)
+            productCurrentPrice: item.productCurrentPrice || item.price, // ✅ SKU selling price
+            itemSubtotalAtMRP: item.itemSubtotalAtMRP || (item.productBasePrice || item.price) * item.quantity, // ✅ Base price × Quantity
+            itemSubtotalAtSellingPrice: item.itemSubtotalAtSellingPrice || (item.productCurrentPrice || item.price) * item.quantity, // ✅ Selling price × Quantity
+            itemAutoDiscount: item.itemAutoDiscount || 0, // ✅ Discount per item (MRP - selling)
+
+            // Product metadata
+            category: item.category || null,
+            brand: item.brand || null,
+
+            // Variant information (color, size, etc.)
+            variants: item.variants || null,
+            selectedColor: item.selectedColor || null, // ✅ For backward compatibility
+
+            // Additional metadata for reference
             itemMetadata: {
-              originalPrice: item.price,
-              appliedDiscount: item.discountPrice ? (item.price - item.discountPrice) : 0,
-              category: item.category || null,
-              brand: item.brand || null
+              basePriceUsed: item.productBasePrice || item.price,
+              currentPriceUsed: item.productCurrentPrice || item.price,
+              discountPerItem: item.itemAutoDiscount || 0,
+              calculatedAt: now.toISOString()
             }
           })),
 
-          // Comprehensive amount breakdown
-          amountBreakdown: {
-            subTotal,
-            discount: discountAmount,
-            deliveryFee,
-            walletUsed: walletAmountUsed,
-            finalAmount: finalAmount,
-            totalOrderAmount: totalOrderAmount, // Add total order amount for notifications
-            // Additional breakdown
-            taxAmount: 0, // Can be added if needed
-            serviceCharge: 0, // Can be added if needed
-            totalSavings: discountAmount + walletAmountUsed
+          // Comprehensive pricing breakdown with CORRECT field names (MRP-based, no double-counting)
+          pricingSummary: {
+            orderSubtotal,             // ✅ Sum of all itemSubtotalAtMRP (base prices)
+            productDiscount,           // ✅ Auto discount from price difference
+            couponCode,                // ✅ Coupon code applied (if any)
+            couponDiscount,            // ✅ Discount amount from coupon
+            totalDiscount,             // ✅ Sum of all discounts (deducted ONCE)
+            subtotalAfterDiscount,     // ✅ Order amount after all discounts
+            deliveryFee,               // ✅ Shipping/delivery charge
+            totalBeforePayment,        // ✅ Final amount before payment mode split
+          },
+
+          // Comprehensive payment breakdown
+          paymentSummary: {
+            paymentMode,               // Payment method: razorpay, cod, wallet, partial_wallet
+            walletPaidAmount,          // Amount paid from wallet
+            onlinePaidAmount,          // Amount paid online (Razorpay/COD)
+            totalOrderValue,           // Grand total of the order
           },
 
           // Coupon information
@@ -475,15 +574,24 @@ export const createOrder = onCall(
         currency,
         paymentMode,
 
-        // Comprehensive amount breakdown
-        amountBreakdown: {
-          subTotal,
-          discount: discountAmount,
+        // Pricing breakdown with proper field names
+        pricingSummary: {
+          orderSubtotal,
+          productDiscount,
+          couponCode,
+          couponDiscount,
+          totalDiscount,
+          subtotalAfterDiscount,
           deliveryFee,
-          walletUsed: walletAmountUsed,
-          finalAmount: finalAmount,
-          totalOrderAmount,
-          totalSavings: discountAmount + walletAmountUsed
+          totalBeforePayment
+        },
+
+        // Payment breakdown with proper field names
+        paymentSummary: {
+          paymentMode,
+          walletPaidAmount,
+          onlinePaidAmount,
+          totalOrderValue
         },
 
         // Payment information
@@ -496,14 +604,14 @@ export const createOrder = onCall(
         // Coupon information
         couponInfo: couponCode ? {
           code: couponCode,
-          discountApplied: discountAmount
+          discountApplied: couponDiscount
         } : null,
 
         // Wallet information
         walletInfo: (isWalletFull || isWalletPartial) ? {
-          amountUsed: walletAmountUsed,
+          amountUsed: walletPaidAmount,
           isPartialPayment: isWalletPartial,
-          remainingAmount: isWalletPartial ? finalAmount : 0, // finalAmount is already the remaining amount
+          remainingAmount: isWalletPartial ? onlinePaidAmount : 0,
           paymentMethod: isWalletPartial ? 'razorpay' : null
         } : null,
 
@@ -763,13 +871,20 @@ async function sendOrderNotification(userId: string, orderId: string, type: stri
     }
 
     const orderData = orderDoc.data();
-    const totalAmount = orderData?.amountBreakdown?.totalOrderAmount || orderData?.amountBreakdown?.finalAmount || 0;
+
+    // safest & most semantic
+    const totalAmount =
+      orderData?.paymentSummary?.totalOrderValue ??
+      orderData?.pricingSummary?.totalBeforePayment ??
+      orderData?.transactionDetails?.amount ??
+      0;
 
     console.log('📧 Notification amount debug:');
-    console.log('  - amountBreakdown:', orderData?.amountBreakdown);
-    console.log('  - totalOrderAmount:', orderData?.amountBreakdown?.totalOrderAmount);
-    console.log('  - finalAmount:', orderData?.amountBreakdown?.finalAmount);
+    console.log('  - paymentSummary.totalOrderValue:', orderData?.paymentSummary?.totalOrderValue);
+    console.log('  - pricingSummary.totalBeforePayment:', orderData?.pricingSummary?.totalBeforePayment);
+    console.log('  - transactionDetails.amount:', orderData?.transactionDetails?.amount);
     console.log('  - Using amount:', totalAmount);
+
 
     let title = '';
     let body = '';
@@ -894,6 +1009,7 @@ async function handleOrderPaid(payload: any) {
     // Extract order and payment details from payload
     const orderEntity = payload.order?.entity;
     const paymentEntity = payload.payment?.entity;
+    console.log("payment payload after payment ", paymentEntity, orderEntity)
 
     if (!orderEntity || !paymentEntity) {
       console.error('❌ Invalid order.paid payload structure');
@@ -1040,7 +1156,7 @@ export const cancelOrder = onCall(
       }
 
       const userId = request.auth.uid;
-      const { orderId, cancelReason, refundAmount } = request.data;
+      const { orderId, cancelReason } = request.data;
 
       // Validate required fields
       if (!orderId) {
@@ -1081,12 +1197,12 @@ export const cancelOrder = onCall(
         orderId,
         paymentMode,
         currentStatus,
-        amountBreakdown: orderData.amountBreakdown
+        amountBreakdown: orderData.paymentSummary
       });
 
       // Calculate refund amount
-      const originalAmount = orderData.amountBreakdown?.totalOrderAmount || orderData.amountBreakdown?.finalAmount || 0;
-      const finalRefundAmount = refundAmount || originalAmount;
+      const originalAmount = orderData.paymentSummary?.totalOrderValue || 0;
+      const finalRefundAmount = originalAmount;
 
       if (finalRefundAmount <= 0) {
         throw new Error('Invalid refund amount');
@@ -1106,7 +1222,7 @@ export const cancelOrder = onCall(
           refundResult = await handleRazorpayRefund(orderId, paymentId, finalRefundAmount, cancelReason);
           break;
         case 'partial_wallet':
-          refundResult = await handlePartialWalletRefund(orderId, paymentId, finalRefundAmount, userId, orderData.amountBreakdown, cancelReason);
+          refundResult = await handlePartialWalletRefund(orderId, paymentId, finalRefundAmount, userId, orderData.paymentSummary, cancelReason);
           break;
         default:
           throw new Error(`Unsupported payment mode for refund: ${paymentMode}`);
@@ -1294,13 +1410,13 @@ async function handlePartialWalletRefund(
   paymentId: string,
   refundAmount: number,
   userId: string,
-  amountBreakdown: any,
+  paymentSummary: any,
   cancelReason: string
 ): Promise<any> {
   console.log('💰 PARTIAL WALLET REFUND: Processing refund for both wallet and Razorpay portions');
 
-  const walletAmountUsed = amountBreakdown?.walletUsed || 0;
-  const razorpayAmount = amountBreakdown?.finalAmount || 0;
+  const walletAmountUsed = paymentSummary?.walletPaidAmount || 0;
+  const razorpayAmount = paymentSummary?.onlinePaidAmount || 0;
 
   console.log('💰 Partial wallet refund breakdown:', {
     totalRefund: refundAmount,

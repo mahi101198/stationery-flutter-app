@@ -55,8 +55,6 @@ class _SafeNetworkImageState extends State<SafeNetworkImage> {
         child: Image(
           image: _imageProvider,
           fit: widget.fit,
-          cacheWidth: widget.width != null ? (widget.width! * 2).toInt() : null,
-          cacheHeight: widget.height != null ? (widget.height! * 2).toInt() : null,
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) {
               return child;

@@ -105,20 +105,34 @@ class _EnhancedCartButtonState extends State<EnhancedCartButton>
                       ),
                       child: OutlinedButton(
                         onPressed: widget.isCartUpdating ? null : () async {
-                          // If ANY items in cart and this product is NOT in cart, go to cart
-                          if (shouldShowGoToCart && !isInCart) {
+                          // Get the selected SKU from ProductDetailController
+                          final productController = Get.find<ProductDetailController>();
+                          final selectedSKU = productController.selectedSKU.value;
+
+                          if (selectedSKU == null) {
+                            TLoaders.errorSnackBar(
+                              title: 'Selection Required',
+                              message: 'Please select all product options before proceeding',
+                            );
+                            return;
+                          }
+
+                          // If ANY items in cart and this SKU is NOT in cart, go to cart
+                          final isThisSKUInCart = (widget.cartQuantity ?? 0) > 0;
+                          if (shouldShowGoToCart && !isThisSKUInCart) {
                             Get.offNamedUntil(
                               Routes.bottomNav,
                               arguments: 'cart',
                               (route) => route.settings.name == Routes.bottomNav,
                             );
-                          } else if (isInCart) {
+                          } else if (isThisSKUInCart) {
                             if (widget.cartQuantity != widget.quantity) {
-                              // Update quantity in cart
+                              // Update quantity in cart using SKU ID
                               final cartController = CartController.instance;
                               await cartController.updateCartItemQuantity(
-                                widget.product.productId, 
-                                widget.quantity
+                                selectedSKU.skuId,  // Use SKU ID instead of product ID
+                                widget.quantity,
+                                productContext: widget.product,
                               );
                             } else {
                               // Go to Cart
@@ -137,12 +151,13 @@ class _EnhancedCartButtonState extends State<EnhancedCartButton>
                               );
                               return;
                             }
-                            // Add to Cart
+                            // Add to Cart using SKU ID
                             final cartController = CartController.instance;
                             await cartController.addToCart(
-                              widget.product.productId, 
+                              selectedSKU.skuId,  // Use SKU ID instead of product ID
                               widget.quantity,
                               selectedColor: widget.selectedColor,
+                              productContext: widget.product,
                             );
                           }
                         },

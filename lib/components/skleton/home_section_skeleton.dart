@@ -55,7 +55,7 @@ class HomeSectionSkeleton extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               itemBuilder: (context, index) {
                 return ProductCardSkeleton(
-                  width: (MediaQuery.of(context).size.width - 48) / 4.2,
+                  width: (MediaQuery.of(context).size.width - 48) / 3.1,
                 );
               },
             ),

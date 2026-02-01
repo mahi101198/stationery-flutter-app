@@ -80,37 +80,22 @@ class CartController extends GetxController {
     // Listen to cart changes in real-time
     _cartSubscription = _cartService.getCartStream(_currentUserId!).listen(
       (cart) {
-        print('📥 ════════════════════════════════════════════════════════');
-        print('📥 CART STREAM UPDATE RECEIVED');
-        print('📥 ════════════════════════════════════════════════════════');
-        
         if (cart != null) {
-          print('✅ Cart data received: ${cart.items.length} items');
-          for (var item in cart.items) {
-            print('   - ${item.productId} x ${item.quantity}');
-          }
+          print('✅ Cart stream update: ${cart.items.length} items');
           AppLogger.debug('Cart updated: ${cart.items.length} items', tag: 'CartController');
           cartItems.assignAll(cart.items);
-          print('✅ Cart items updated in controller');
           _loadProductDetails();
-          print('✅ Loading product details...');
         } else {
-          print('⚠️ Cart is null or empty');
+          print('ℹ️ Cart is empty');
           AppLogger.debug('Cart is empty or deleted', tag: 'CartController');
           cartItems.clear();
           cartProducts.clear();
           calculateTotal();
         }
-        
-        print('📥 ════════════════════════════════════════════════════════');
       },
       onError: (error) {
-        print('❌ ════════════════════════════════════════════════════════');
-        print('❌ CART STREAM ERROR');
-        print('❌ Error: $error');
-        print('❌ ════════════════════════════════════════════════════════');
+        print('❌ Cart stream error: $error');
         AppLogger.logErrorWithContext('CartStream', error, StackTrace.current);
-        // Silently handle error - no user notification in production
         // Try to reconnect after error
         Future.delayed(const Duration(seconds: 2), () {
           if (_currentUserId != null) {
@@ -323,13 +308,22 @@ class CartController extends GetxController {
     final originalItem = cartItems.firstWhereOrNull((item) => item.productId == productId);
     final originalQuantity = originalItem?.quantity ?? 0;
     
+    print('🔄 ═══════════════════════════════════════════════════════');
+    print('🔄 UPDATING CART ITEM QUANTITY');
+    print('🔄 Product ID (SKU): $productId');
+    print('🔄 New Quantity: $quantity');
+    print('🔄 Original Quantity: $originalQuantity');
+    print('🔄 ═══════════════════════════════════════════════════════');
+    
     try {
       if (_currentUserId == null) {
+        print('❌ No user logged in');
         AppLogger.error('Update cart failed: No user logged in', tag: 'CART');
         return;
       }
       
       if (productId.isEmpty) {
+        print('❌ Empty product ID');
         AppLogger.error('Update cart failed: Empty product ID', tag: 'CART');
         return;
       }
@@ -337,13 +331,14 @@ class CartController extends GetxController {
       // Get product details for validation
       final product = productContext ?? cartProducts.firstWhereOrNull((p) => p.productId == productId);
       
-      // Only validate if product is found
+      // Only validate if product is found and quantity > 0
       if (product != null && quantity > 0) {
         // Find the specific SKU for this cart item
         final sku = product.productSkus.firstWhereOrNull((s) => s.skuId == productId);
         
         // Check max per order limit (SKU-level)
         if (sku != null && quantity > sku.maxPerOrder) {
+          print('⚠️ Max per order limit reached: ${sku.maxPerOrder}');
           TLoaders.customToast(
             message: "Maximum ${sku.maxPerOrder} units per order for this item.",
           );
@@ -353,12 +348,20 @@ class CartController extends GetxController {
         
         // Check stock availability silently
         if (quantity > product.stock) {
+          print('⚠️ Stock limit reached: ${product.stock}');
+          TLoaders.customToast(
+            message: "Only ${product.stock} items available in stock.",
+          );
           AppLogger.warning('Stock limit: Only ${product.stock} available for $productId', tag: 'CART');
           return;
         }
         
         // Check max quantity per user silently
         if (quantity > product.maxQuantityPerUser) {
+          print('⚠️ User quantity limit reached: ${product.maxQuantityPerUser}');
+          TLoaders.customToast(
+            message: "Maximum ${product.maxQuantityPerUser} items per user.",
+          );
           AppLogger.warning('Quantity limit: Max ${product.maxQuantityPerUser} for $productId', tag: 'CART');
           return;
         }
@@ -368,38 +371,55 @@ class CartController extends GetxController {
       
       // Mark item as updating
       updatingItems[productId] = true;
+      print('🔄 Marked item as updating');
       
       // Optimistic update: Update the UI immediately before the server responds
       final itemIndex = cartItems.indexWhere((item) => item.productId == productId);
       if (itemIndex != -1) {
         if (quantity <= 0) {
           // Remove item optimistically
+          print('➖ Removing item optimistically (quantity <= 0)');
           cartItems.removeAt(itemIndex);
         } else {
           // Update quantity optimistically
+          print('🔄 Updating quantity optimistically to $quantity');
           final updatedItem = cartItems[itemIndex].copyWith(quantity: quantity);
           cartItems[itemIndex] = updatedItem;
         }
         calculateTotal();
+        print('✅ UI updated optimistically');
+      } else {
+        print('⚠️ Cart item not found in local state for optimistic update');
       }
       
       // Update cart item quantity on the server
       // The stream will sync if there are any differences
       if (quantity <= 0) {
+        print('➖ Removing item from server (quantity <= 0)');
         await _cartService.removeFromCart(userId: _currentUserId!, productId: productId);
+        print('✅ Item removed from server');
       } else {
+        print('🔄 Updating quantity on server to $quantity');
         await _cartService.updateCartItemQuantity(
           userId: _currentUserId!, 
           productId: productId, 
           quantity: quantity,
           productContext: productContext,
         );
+        print('✅ Quantity updated on server');
       }
       
-      // Remove from updating items
-      updatingItems.remove(productId);
+      print('✅ ═══════════════════════════════════════════════════════');
+      print('✅ CART QUANTITY UPDATE SUCCESS');
+      print('✅ ═══════════════════════════════════════════════════════');
+      
     } catch (e) {
-      updatingItems.remove(productId);
+      print('❌ ═══════════════════════════════════════════════════════');
+      print('❌ CART QUANTITY UPDATE ERROR');
+      print('❌ Error: $e');
+      print('❌ Error type: ${e.runtimeType}');
+      print('❌ ═══════════════════════════════════════════════════════');
+      
       AppLogger.logErrorWithContext('updateCartItemQuantity', e, StackTrace.current);
       
       // Rollback optimistic update on error
@@ -407,15 +427,24 @@ class CartController extends GetxController {
         final itemIndex = cartItems.indexWhere((item) => item.productId == productId);
         if (itemIndex != -1) {
           cartItems[itemIndex] = originalItem;
+          print('🔄 Rolled back optimistic update to quantity ${originalItem.quantity}');
         } else if (originalQuantity > 0) {
           // Item was removed optimistically, add it back
           cartItems.add(originalItem);
+          print('➕ Added back removed item (rollback)');
         }
         calculateTotal();
       }
       
-      AppLogger.logErrorWithContext('updateCartItemQuantity', e, StackTrace.current);
-      // Silently handle error - no user notification in production
+      // Show user-friendly error message
+      TLoaders.customToast(
+        message: "Failed to update quantity. Please try again.",
+      );
+      
+    } finally {
+      // Remove from updating items
+      updatingItems.remove(productId);
+      print('✅ Removed updating flag for $productId');
     }
   }
 
@@ -423,24 +452,30 @@ class CartController extends GetxController {
     total.value = 0.0;
     
     for (final cartItem in cartItems) {
-      // Find the product containing this SKU
-      final product = cartProducts.firstWhereOrNull(
-        (p) => p.productSkus.any((sku) => sku.skuId == cartItem.productId),
-      );
-      
-      if (product != null) {
-        // Find the specific SKU within the product
-        final sku = product.productSkus.firstWhereOrNull(
-          (s) => s.skuId == cartItem.productId,
+      // Check if cart item has enhanced pricing data (price > 0)
+      if (cartItem.price != null && cartItem.price! > 0) {
+        // Use enhanced cart pricing directly
+        total.value += cartItem.price! * cartItem.quantity;
+      } else {
+        // Fallback to product lookup for legacy cart items
+        final product = cartProducts.firstWhereOrNull(
+          (p) => p.productSkus.any((sku) => sku.skuId == cartItem.productId),
         );
         
-        if (sku != null && sku.price > 0) {
-          // Use SKU price for calculation
-          total.value += sku.price * cartItem.quantity;
+        if (product != null) {
+          // Find the specific SKU within the product
+          final sku = product.productSkus.firstWhereOrNull(
+            (s) => s.skuId == cartItem.productId,
+          );
+          
+          if (sku != null && sku.price > 0) {
+            // Use SKU price for calculation
+            total.value += sku.price * cartItem.quantity;
+          }
+        } else {
+          // Log missing product for debugging
+          AppLogger.warning('Product not found for SKU: ${cartItem.productId}', tag: 'CartController');
         }
-      } else {
-        // Log missing product for debugging
-        AppLogger.warning('Product not found for SKU: ${cartItem.productId}', tag: 'CartController');
       }
     }
   }

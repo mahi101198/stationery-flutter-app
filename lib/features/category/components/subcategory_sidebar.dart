@@ -276,42 +276,36 @@ class SubCategorySidebar extends StatelessWidget {
                   final isSubSelected = selectedSubCategoryId == subCategory.id;
                   return ListTile(
                     dense: true,
-                    leading: CircleAvatar(
-                      radius: 16,
-                      backgroundColor: isSubSelected 
-                          ? Theme.of(context).primaryColor.withValues(alpha: 0.2)
-                          : Colors.grey[200],
-                      child: subCategory.image.isNotEmpty
-                          ? ClipOval(
-                              child: CachedNetworkImage(
-                                imageUrl: subCategory.image,
-                                width: 32,
-                                height: 32,
-                                fit: BoxFit.cover,
-                                placeholder: (context, url) => Icon(
-                                  Icons.label,
-                                  size: 16,
-                                  color: isSubSelected 
-                                      ? Theme.of(context).primaryColor
-                                      : Colors.grey[600],
-                                ),
-                                errorWidget: (context, url, error) => Icon(
-                                  Icons.label,
-                                  size: 16,
-                                  color: isSubSelected 
-                                      ? Theme.of(context).primaryColor
-                                      : Colors.grey[600],
-                                ),
+                    leading: subCategory.image.isNotEmpty
+                        ? ClipOval(
+                            child: CachedNetworkImage(
+                              imageUrl: subCategory.image,
+                              width: 32,
+                              height: 32,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Icon(
+                                Icons.label,
+                                size: 16,
+                                color: isSubSelected 
+                                    ? Theme.of(context).primaryColor
+                                    : Colors.grey[600],
                               ),
-                            )
-                          : Icon(
-                              Icons.label,
-                              size: 16,
-                              color: isSubSelected 
-                                  ? Theme.of(context).primaryColor
-                                  : Colors.grey[600],
+                              errorWidget: (context, url, error) => Icon(
+                                Icons.label,
+                                size: 16,
+                                color: isSubSelected 
+                                    ? Theme.of(context).primaryColor
+                                    : Colors.grey[600],
+                              ),
                             ),
-                    ),
+                          )
+                        : Icon(
+                            Icons.label,
+                            size: 16,
+                            color: isSubSelected 
+                                ? Theme.of(context).primaryColor
+                                : Colors.grey[600],
+                          ),
                     title: Text(
                       subCategory.name,
                       style: TextStyle(

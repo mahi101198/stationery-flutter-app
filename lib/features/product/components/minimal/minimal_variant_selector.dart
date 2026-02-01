@@ -53,51 +53,52 @@ class MinimalVariantSelector extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          // Variant Chips
-          Wrap(
-            alignment: WrapAlignment.start,
-            spacing: 8,
-            runSpacing: 8,
-            children: options.map((option) {
-              final isSelected = selectedValue == option;
+          // Variant Chips - Single Row with Horizontal Scrolling
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              spacing: 8,
+              children: options.map((option) {
+                final isSelected = selectedValue == option;
 
-              return GestureDetector(
-                onTap: () => onSelected(option),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeInOut,
-                  height: 40,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF00BCD4) : Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: isSelected ? const Color(0xFF00BCD4) : const Color(0xFFD1D5DB),
-                      width: 1.5,
+                return GestureDetector(
+                  onTap: () => onSelected(option),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeInOut,
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFF00BCD4) : Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: isSelected ? const Color(0xFF00BCD4) : const Color(0xFFD1D5DB),
+                        width: 1.5,
+                      ),
+                      boxShadow: isSelected
+                          ? [
+                              const BoxShadow(
+                                color: Color(0x1A00BCD4),
+                                blurRadius: 8,
+                                offset: Offset(0, 2),
+                              ),
+                            ]
+                          : null,
                     ),
-                    boxShadow: isSelected
-                        ? [
-                            const BoxShadow(
-                              color: Color(0x1A00BCD4),
-                              blurRadius: 8,
-                              offset: Offset(0, 2),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Center(
-                    child: Text(
-                      _formatOptionValue(option),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: isSelected ? Colors.white : const Color(0xFF374151),
+                    child: Center(
+                      child: Text(
+                        _formatOptionValue(option),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: isSelected ? Colors.white : const Color(0xFF374151),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              );
-            }).toList(),
+                );
+              }).toList(),
+            ),
           ),
         ],
       ),

@@ -11,6 +11,7 @@ import 'package:rps_stationery/features/product/components/minimal/minimal_deliv
 import 'package:rps_stationery/data/models/delivery_info_model.dart';
 import 'package:rps_stationery/features/product/components/minimal/minimal_sticky_bottom_bar.dart';
 import 'package:rps_stationery/features/product/components/minimal/minimal_divider.dart';
+import 'package:rps_stationery/features/product/components/minimal/minimal_review_section.dart';
 import 'package:rps_stationery/utils/theme/app_colors.dart';
 import 'package:rps_stationery/utils/theme/component_styles.dart';
 
@@ -210,17 +211,11 @@ class MinimalProductDetailsScreen extends StatelessWidget {
                         Container(
                           color: Theme.of(context).scaffoldBackgroundColor,
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                          child: Obx(() {
-                            final quantity = controller.quantity.value;
-                            final maxQuantity = controller.maxQuantity;
-                            
-                            return MinimalQuantitySelector(
-                              quantity: quantity,
-                              maxQuantity: maxQuantity,
-                              onIncrement: () => controller.incrementQuantity(),
-                              onDecrement: () => controller.decrementQuantity(),
-                            );
-                          }),
+                          child: MinimalQuantitySelector(
+                            maxQuantity: controller.maxQuantity,
+                            onIncrement: () => controller.incrementQuantity(),
+                            onDecrement: () => controller.decrementQuantity(),
+                          ),
                         ),
                         const MinimalDivider(),
                       ],
@@ -239,6 +234,26 @@ class MinimalProductDetailsScreen extends StatelessWidget {
                       ),
                     );
                   }).toList(),
+
+                  // Reviews & Ratings Section
+                  SliverToBoxAdapter(
+                    child: Obx(() {
+                      final productId = product.id;
+                      final canWrite = controller.canWriteReview.value;
+                      final hasExisting = controller.hasExistingReview.value;
+                      
+                      return Column(
+                        children: [
+                          MinimalReviewSection(
+                            productId: productId,
+                            canWriteReview: canWrite,
+                            hasExistingReview: hasExisting,
+                          ),
+                          const MinimalDivider(),
+                        ],
+                      );
+                    }),
+                  ),
 
                   // Delivery & Trust Info
                   SliverToBoxAdapter(

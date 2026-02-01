@@ -458,7 +458,7 @@ class AddressSelectionScreen extends StatelessWidget {
           final quantity = arguments['quantity'] ?? 1;
           final selectedColor = arguments['selectedColor'] as String?;
           print('🔍 AddressSelectionScreen: Buy Now item - selectedColor=$selectedColor');
-          cartItems = [CartItem(
+          cartItems = [CartItem.minimal(
             productId: product.productId,
             quantity: quantity,
             addedAt: DateTime.now(),

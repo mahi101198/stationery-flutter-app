@@ -6,7 +6,7 @@ import * as logger from 'firebase-functions/logger';
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
-import { sendOrderConfirmationEmail } from './email-service.js';
+import { sendOrderConfirmationEmail, sendOrderStatusUpdateEmail } from './email-service.js';
 const db = getFirestore();
 const messaging = getMessaging();
 /**
@@ -35,9 +35,20 @@ export const onOrderStatusUpdated = onDocumentUpdated({
             logger.info(`🚚 Order ${orderId} marked as delivered, sending confirmation notification`);
             await sendDeliveryConfirmationNotification(orderId, afterData);
         }
-        // Check if status changed to 'confirmed'
-        if (afterStatus === 'confirmed' && beforeStatus !== 'confirmed') {
-            logger.info(`📧 Order ${orderId} confirmed, sending email to admin`);
+        // Send email notification for any status change (except if it's the same status)
+        if (beforeStatus !== afterStatus) {
+            logger.info(`📧 Order ${orderId} status changed to ${afterStatus}, sending email notification`);
+            try {
+                await sendOrderStatusUpdateEmail(orderId, afterData, beforeStatus, afterStatus);
+            }
+            catch (emailError) {
+                logger.error(`⚠️ Error sending status update email for order ${orderId}:`, emailError);
+                // Don't throw here - we don't want email failures to break the order update flow
+            }
+        }
+        // Check if status changed to 'confirmed' for initial confirmation email (kept for backwards compatibility)
+        if (afterStatus === 'confirmed' && beforeStatus === 'placed') {
+            logger.info(`✅ Order ${orderId} confirmed, sending detailed confirmation email`);
             // Fetch delivery details
             let deliveryData = {};
             if (afterData.deliveryId) {
@@ -46,7 +57,12 @@ export const onOrderStatusUpdated = onDocumentUpdated({
                     deliveryData = deliveryDoc.data() || {};
                 }
             }
-            await sendOrderConfirmationEmail(afterData, deliveryData);
+            try {
+                await sendOrderConfirmationEmail(afterData, deliveryData);
+            }
+            catch (emailError) {
+                logger.error(`⚠️ Error sending confirmation email for order ${orderId}:`, emailError);
+            }
         }
     }
     catch (error) {

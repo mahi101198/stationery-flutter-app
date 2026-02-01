@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:rps_stationery/features/product/controllers/review_controller.dart';
+import 'package:rps_stationery/features/shop/controllers/review_controller.dart';
 import 'package:rps_stationery/data/models/review_model.dart';
 import 'package:rps_stationery/constants.dart';
 import 'package:rps_stationery/features/product/screens/product_reviews_screen.dart';

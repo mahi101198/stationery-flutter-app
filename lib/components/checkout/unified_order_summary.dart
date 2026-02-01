@@ -157,21 +157,28 @@ class UnifiedOrderSummary extends StatelessWidget {
   }
 
   Widget _buildMiniProductCard(BuildContext context, dynamic item) {
-    return FutureBuilder<ProductModel?>(
-      future: ProductRepo.instance.getProductBySKUId(item.productId),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return _buildLoadingCard(context);
-        }
-        
-        if (snapshot.hasError || !snapshot.hasData) {
-          return _buildErrorCard(context, item);
-        }
-        
-        final product = snapshot.data!;
-        return _buildProductCard(context, product, item.quantity, item.productId);
-      },
-    );
+    // Check if cart item has enhanced data (price > 0 means it has comprehensive data)
+    if (item.price != null && item.price > 0) {
+      // Use enhanced cart data directly
+      return _buildEnhancedProductCard(context, item);
+    } else {
+      // Fallback to product lookup for legacy cart items
+      return FutureBuilder<ProductModel?>(
+        future: ProductRepo.instance.getProductBySKUId(item.productId),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return _buildLoadingCard(context);
+          }
+          
+          if (snapshot.hasError || !snapshot.hasData) {
+            return _buildErrorCard(context, item);
+          }
+          
+          final product = snapshot.data!;
+          return _buildProductCard(context, product, item.quantity, item.productId);
+        },
+      );
+    }
   }
 
   Widget _buildLoadingCard(BuildContext context) {
@@ -568,6 +575,123 @@ class UnifiedOrderSummary extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  /// Build product card using enhanced cart data directly
+  Widget _buildEnhancedProductCard(BuildContext context, dynamic cartItem) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: TSizes.xs),
+      padding: const EdgeInsets.all(TSizes.sm),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(TSizes.sm),
+        border: Border.all(color: TColors.grey.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          // Product image
+          ClipRRect(
+            borderRadius: BorderRadius.circular(TSizes.xs),
+            child: SizedBox(
+              width: 50,
+              height: 50,
+              child: cartItem.imageUrl != null && cartItem.imageUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: cartItem.imageUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: TColors.grey.withValues(alpha: 0.1),
+                        child: const Icon(Icons.image, size: 24, color: TColors.grey),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: TColors.grey.withValues(alpha: 0.1),
+                        child: const Icon(Icons.image, size: 24, color: TColors.grey),
+                      ),
+                    )
+                  : Container(
+                      color: TColors.grey.withValues(alpha: 0.1),
+                      child: const Icon(Icons.image, size: 24, color: TColors.grey),
+                    ),
+            ),
+          ),
+          const SizedBox(width: TSizes.sm),
+          // Product details
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  cartItem.title ?? 'Product ${cartItem.productId}',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (cartItem.subtitle != null && cartItem.subtitle.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    cartItem.subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: TColors.darkerGrey,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                // Price with discount if applicable
+                if (cartItem.mrp != null && cartItem.mrp > cartItem.price) ...[
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text(
+                        '₹${cartItem.price.toStringAsFixed(0)}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: TColors.success,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '₹${cartItem.mrp.toStringAsFixed(0)}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          decoration: TextDecoration.lineThrough,
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    '₹${cartItem.price.toStringAsFixed(0)}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          // Quantity Badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: TSizes.xs, vertical: 2),
+            decoration: BoxDecoration(
+              color: TColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              'Qty: ${cartItem.quantity}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: TColors.primary,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

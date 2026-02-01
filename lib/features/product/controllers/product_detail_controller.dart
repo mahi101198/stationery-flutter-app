@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:confetti/confetti.dart';
 import 'package:rps_stationery/data/services/product_cache_service.dart';
 import 'package:rps_stationery/features/cart/controllers/cart_controller.dart';
-import 'package:rps_stationery/features/product/controllers/review_controller.dart';
+import 'package:rps_stationery/features/shop/controllers/review_controller.dart';
 import 'package:rps_stationery/data/models/product_model.dart';
 import 'package:rps_stationery/data/models/product_sku_model.dart';
 import 'package:rps_stationery/utils/popups/loaders.dart';
@@ -17,6 +17,10 @@ class ProductDetailController extends GetxController {
   var isCartUpdating = false.obs;
   var isRefreshing = false.obs;
   var isInWishlist = false.obs;
+  
+  // Review eligibility
+  var canWriteReview = false.obs;
+  var hasExistingReview = false.obs;
 
   var quantity = 1.obs;
   var cartQuantity = 0.obs;
@@ -89,15 +93,28 @@ class ProductDetailController extends GetxController {
           (item) => item.productId == selectedSKU.value!.skuId,
         );
         
-        // Schedule update to avoid setState during build
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (cartItem != null) {
-            quantity.value = cartItem.quantity;
-            cartQuantity.value = cartItem.quantity;
-          } else {
-            cartQuantity.value = 0;
+        // Update cart quantity tracking
+        if (cartItem != null) {
+          final newCartQuantity = cartItem.quantity;
+          print('🔄 Cart listener: Found cart item for SKU ${selectedSKU.value!.skuId} with quantity $newCartQuantity');
+          cartQuantity.value = newCartQuantity;
+          
+          // Sync quantity.value with cart to keep UI in sync
+          // Only update if different to avoid unnecessary rebuilds
+          if (quantity.value != newCartQuantity) {
+            quantity.value = newCartQuantity;
+            print('✅ Synced quantity.value to match cart: $newCartQuantity');
           }
-        });
+          
+          print('✅ Updated cartQuantity to $newCartQuantity');
+        } else {
+          print('ℹ️ Cart listener: No cart item found for SKU ${selectedSKU.value!.skuId}');
+          cartQuantity.value = 0;
+          // Reset to 1 when item is removed from cart
+          if (quantity.value == 0) {
+            quantity.value = 1;
+          }
+        }
       }
     });
 
@@ -139,11 +156,14 @@ class ProductDetailController extends GetxController {
       // Initialize SKU selection
       _initializeSKUSelection();
 
+      // Check current cart state immediately after SKU initialization
+      _checkCurrentCartState();
+
       // Update wishlist status
       isInWishlist.value = _cacheService.wishlistIds.contains(fetchedProduct.productId);
       
-      // Load reviews for this product
-      reviewController.loadProductReviews(fetchedProduct.productId);
+      // Load reviews and check eligibility
+      await _loadReviewData(fetchedProduct.productId);
 
     } catch (e) {
       print('❌ ProductDetailController: Error fetching product: $e');
@@ -206,9 +226,17 @@ class ProductDetailController extends GetxController {
       print('✅ SKU found for selection: ${matchingSKU.skuId}');
       print('   Price: ₹${matchingSKU.price}, MRP: ₹${matchingSKU.mrp}');
       print('   Availability: ${matchingSKU.availability}');
+      
+      // Check cart state when SKU changes - important for quantity sync
+      Future.delayed(Duration.zero, () {
+        _checkCurrentCartState();
+      });
     } else {
       selectedSKU.value = null;
       print('⚠️ No SKU found for attributes: $selectedAttributes');
+      // Reset quantities when no SKU is found
+      quantity.value = 1;
+      cartQuantity.value = 0;
     }
   }
 
@@ -228,10 +256,57 @@ class ProductDetailController extends GetxController {
     cartQuantity.value = cartItem?.quantity ?? 0;
   }
 
+  /// Check current cart state immediately (called on load and SKU change)
+  void _checkCurrentCartState() {
+    if (product.value == null || selectedSKU.value == null) {
+      print('⚠️ _checkCurrentCartState: Missing product or SKU data');
+      return;
+    }
+    
+    print('🔍 Checking current cart state for SKU: ${selectedSKU.value!.skuId}');
+    
+    final cartItem = _cartController.cartItems.firstWhereOrNull(
+      (item) => item.productId == selectedSKU.value!.skuId,
+    );
+    
+    if (cartItem != null) {
+      final cartQty = cartItem.quantity;
+      print('✅ Product is in cart: quantity = $cartQty');
+      
+      // Synchronize both quantity values with cart
+      quantity.value = cartQty;
+      cartQuantity.value = cartQty;
+      
+      print('🔄 Synced quantity: ${quantity.value}, cartQuantity: ${cartQuantity.value}');
+    } else {
+      print('ℹ️ Product is not in cart');
+      cartQuantity.value = 0;
+      // Keep quantity at 1 for new products (don't change user's selection)
+      if (quantity.value == 0) {
+        quantity.value = 1;
+      }
+    }
+    
+    // Update hasItemsInCart
+    hasItemsInCart.value = _cartController.cartItems.isNotEmpty;
+    print('📊 hasItemsInCart: ${hasItemsInCart.value}');
+  }
+
   void setQuantity(int newQuantity) {
     final maxAllowed = _getMaxAllowedQuantity();
     if (newQuantity <= maxAllowed && newQuantity >= 1) {
       quantity.value = newQuantity;
+      
+      // If item is already in cart, automatically update the cart quantity
+      if (selectedSKU.value != null && cartQuantity.value > 0) {
+        print('🔄 Auto-updating cart quantity from ${cartQuantity.value} to $newQuantity');
+        // Update cart item quantity in the background
+        _cartController.updateCartItemQuantity(
+          selectedSKU.value!.skuId,
+          newQuantity,
+          productContext: product.value,
+        );
+      }
     }
   }
 
@@ -246,6 +321,16 @@ class ProductDetailController extends GetxController {
     final maxAllowed = _getMaxAllowedQuantity();
     if (quantity.value < maxAllowed) {
       quantity.value++;
+      
+      // If item is already in cart, automatically update the cart quantity
+      if (selectedSKU.value != null && cartQuantity.value > 0) {
+        print('🔄 Auto-updating cart quantity from ${cartQuantity.value} to ${quantity.value}');
+        _cartController.updateCartItemQuantity(
+          selectedSKU.value!.skuId,
+          quantity.value,
+          productContext: product.value,
+        );
+      }
     } else {
       TLoaders.warningSnackBar(
         title: "Purchase Limit Reached",
@@ -257,6 +342,16 @@ class ProductDetailController extends GetxController {
   void decrementQuantity() {
     if (quantity.value > 1) {
       quantity.value--;
+      
+      // If item is already in cart, automatically update the cart quantity
+      if (selectedSKU.value != null && cartQuantity.value > 0) {
+        print('🔄 Auto-updating cart quantity from ${cartQuantity.value} to ${quantity.value}');
+        _cartController.updateCartItemQuantity(
+          selectedSKU.value!.skuId,
+          quantity.value,
+          productContext: product.value,
+        );
+      }
     }
   }
 
@@ -427,6 +522,29 @@ class ProductDetailController extends GetxController {
       // Product will be automatically updated through reactive listeners
     } catch (e) {
       TLoaders.errorSnackBar(title: "Oh snap!", message: e.toString());
+    }
+  }
+
+  /// Load review data and check eligibility
+  Future<void> _loadReviewData(String productId) async {
+    try {
+      // Load product reviews
+      await reviewController.getProductReviews(productId, limit: 10);
+      
+      // Get review statistics
+      await reviewController.getProductReviewStats(productId);
+      
+      // Check if user can write a review (has delivered order)
+      canWriteReview.value = await reviewController.canUserReviewProduct(productId);
+      
+      // Check if user already has a review
+      await reviewController.getUserProductReview(productId);
+      hasExistingReview.value = reviewController.userProductReview.value != null;
+      
+      print('✅ Review data loaded: canWrite=$canWriteReview, hasExisting=$hasExistingReview');
+    } catch (e) {
+      print('⚠️ Error loading review data: $e');
+      // Don't show error to user, reviews are optional
     }
   }
 

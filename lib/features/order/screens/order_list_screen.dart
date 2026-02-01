@@ -4,7 +4,6 @@ import 'package:iconsax/iconsax.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:rps_stationery/utils/constants/colors.dart';
 import 'package:rps_stationery/features/order/components/order_ui_helpers.dart';
 import 'package:intl/intl.dart';
 
@@ -17,11 +16,30 @@ class OrderListScreen extends StatelessWidget {
 
     if (user == null) {
       return Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
           title: const Text('My Orders'),
+          centerTitle: true,
+          elevation: 0,
         ),
-        body: const Center(
-          child: Text('Please login to view your orders'),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Iconsax.login,
+                size: 64,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Please login to view your orders',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -30,44 +48,35 @@ class OrderListScreen extends StatelessWidget {
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: CustomScrollView(
         slivers: [
-          // Modern header
+          // Minimalistic header
           SliverAppBar(
-            expandedHeight: 100,
+            expandedHeight: 120,
             floating: true,
             pinned: true,
             backgroundColor: Theme.of(context).colorScheme.surface,
             elevation: 0,
             automaticallyImplyLeading: true,
+            leading: IconButton(
+              icon: Icon(
+                Iconsax.arrow_left,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+              onPressed: () => Get.back(),
+            ),
             flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                padding: EdgeInsets.fromLTRB(
-                  60,
-                  MediaQuery.of(context).padding.top + 16,
-                  20,
-                  16,
-                ),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
-                      Theme.of(context).colorScheme.secondary.withValues(alpha: 0.02),
-                    ],
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      'My Orders',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ],
+              centerTitle: false,
+              titlePadding: EdgeInsets.fromLTRB(
+                60,
+                0,
+                20,
+                16,
+              ),
+              title: Text(
+                'My Orders',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                  letterSpacing: -0.3,
                 ),
               ),
             ),
@@ -81,46 +90,37 @@ class OrderListScreen extends StatelessWidget {
                 .orderBy('createdAt', descending: true)
                 .snapshots(),
             builder: (context, snapshot) {
-              print('📦 OrderListScreen: Stream state - ${snapshot.connectionState}');
-              
               if (snapshot.connectionState == ConnectionState.waiting) {
-                print('⏳ OrderListScreen: Loading orders...');
-                return const SliverFillRemaining(
+                return SliverFillRemaining(
                   child: Center(
                     child: SizedBox(
-                      width: 32,
-                      height: 32,
-                      child: CircularProgressIndicator(strokeWidth: 3),
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                   ),
                 );
               }
 
               if (snapshot.hasError) {
-                print('❌ OrderListScreen: Error loading orders: ${snapshot.error}');
                 return SliverFillRemaining(
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: TColors.error.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Iconsax.warning_2,
-                            size: 48,
-                            color: TColors.error,
-                          ),
+                        Icon(
+                          Iconsax.warning_2,
+                          size: 48,
+                          color: Theme.of(context).colorScheme.error,
                         ),
-                        const SizedBox(height: 24),
-                        const Text(
+                        const SizedBox(height: 16),
+                        Text(
                           'Error loading orders',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -129,7 +129,9 @@ class OrderListScreen extends StatelessWidget {
                           child: Text(
                             snapshot.error.toString(),
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: TColors.darkGrey),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
                           ),
                         ),
                       ],
@@ -139,36 +141,27 @@ class OrderListScreen extends StatelessWidget {
               }
 
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                print('📭 OrderListScreen: No orders found');
                 return SliverFillRemaining(
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(32),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Iconsax.box,
-                            size: 64,
-                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
-                          ),
+                        Icon(
+                          Iconsax.box,
+                          size: 64,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                         ),
-                        const SizedBox(height: 24),
-                        const Text(
+                        const SizedBox(height: 16),
+                        Text(
                           'No orders yet',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Your order history will appear here',
-                          style: TextStyle(
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
@@ -179,10 +172,9 @@ class OrderListScreen extends StatelessWidget {
               }
 
               final orders = snapshot.data!.docs;
-              print('✅ OrderListScreen: Found ${orders.length} orders');
 
               return SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
@@ -191,8 +183,8 @@ class OrderListScreen extends StatelessWidget {
                       final orderId = orderDoc.id;
 
                       return Padding(
-                        padding: EdgeInsets.only(bottom: index == orders.length - 1 ? 0 : 12),
-                        child: _ModernOrderCard(
+                        padding: EdgeInsets.only(bottom: index == orders.length - 1 ? 0 : 16),
+                        child: _PremiumOrderCard(
                           orderId: orderId,
                           orderData: orderData,
                         ),
@@ -210,11 +202,11 @@ class OrderListScreen extends StatelessWidget {
   }
 }
 
-class _ModernOrderCard extends StatelessWidget {
+class _PremiumOrderCard extends StatelessWidget {
   final String orderId;
   final Map<String, dynamic> orderData;
 
-  const _ModernOrderCard({
+  const _PremiumOrderCard({
     required this.orderId,
     required this.orderData,
   });
@@ -222,10 +214,13 @@ class _ModernOrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = orderData['status'] ?? 'pending';
-    final amountBreakdown = orderData['amountBreakdown'] as Map<String, dynamic>?;
-    final totalAmount = (amountBreakdown?['totalOrderAmount'] ?? 
-                        amountBreakdown?['finalAmount'] ?? 
-                        orderData['amount']?['total'] ?? 
+    
+    // Use new schema fields (paymentSummary.totalOrderValue)
+    final paymentSummary = orderData['paymentSummary'] as Map<String, dynamic>?;
+    final pricingSummary = orderData['pricingSummary'] as Map<String, dynamic>?;
+    
+    final totalAmount = (paymentSummary?['totalOrderValue'] ?? 
+                        pricingSummary?['totalBeforePayment'] ?? 
                         orderData['totalAmount'] ?? 0.0).toDouble();
     final createdAt = orderData['createdAt'] as Timestamp?;
     final items = orderData['items'] as List<dynamic>? ?? [];
@@ -244,34 +239,23 @@ class _ModernOrderCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-            spreadRadius: 0,
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
           width: 1,
         ),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
-            print('📱 Opening order details for: $orderId');
-            Get.toNamed('/order-details', arguments: orderId);
-          },
-          borderRadius: BorderRadius.circular(20),
+          onTap: () => Get.toNamed('/order-details', arguments: orderId),
+          borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header with order date and status
+                // Header: Order ID and Status
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,41 +264,44 @@ class _ModernOrderCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Text(
+                            'Order #${orderId.substring(0, 8).toUpperCase()}',
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
                           Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  Iconsax.calendar5,
-                                  size: 16,
-                                  color: Theme.of(context).colorScheme.primary,
+                              Icon(
+                                Iconsax.calendar_1,
+                                size: 14,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                dateStr,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      dateStr,
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    if (timeStr.isNotEmpty)
-                                      Text(
-                                        timeStr,
-                                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                        ),
-                                      ),
-                                  ],
+                              if (timeStr.isNotEmpty) ...[
+                                const SizedBox(width: 8),
+                                Text(
+                                  '•',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  timeStr,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ],
@@ -327,7 +314,7 @@ class _ModernOrderCard extends StatelessWidget {
                 const SizedBox(height: 16),
                 
                 // Product preview images
-                if (previewItems.isNotEmpty) ...[
+                if (previewItems.isNotEmpty) ...[ 
                   Row(
                     children: [
                       ...previewItems.asMap().entries.map((entry) {
@@ -337,12 +324,12 @@ class _ModernOrderCard extends StatelessWidget {
                         
                         return Container(
                           margin: EdgeInsets.only(right: index < previewItems.length - 1 ? 8 : 0),
-                          width: 56,
-                          height: 56,
+                          width: 60,
+                          height: 60,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
                               width: 1,
                             ),
                           ),
@@ -354,58 +341,57 @@ class _ModernOrderCard extends StatelessWidget {
                                     fit: BoxFit.cover,
                                     fadeInDuration: const Duration(milliseconds: 200),
                                     placeholder: (context, url) => Container(
-                                      color: const Color(0xFFF5F5F5),
-                                      child: const Center(
+                                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                      child: Center(
                                         child: SizedBox(
                                           width: 16,
                                           height: 16,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFBDBDBD)),
+                                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                                           ),
                                         ),
                                       ),
                                     ),
                                     errorWidget: (context, url, error) => Container(
-                                      color: const Color(0xFFF5F5F5),
-                                      child: const Icon(
-                                        Icons.image_not_supported,
-                                        color: Color(0xFFBDBDBD),
+                                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                      child: Icon(
+                                        Iconsax.gallery_slash,
+                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                                         size: 20,
                                       ),
                                     ),
                                   )
                                 : Container(
-                                    color: const Color(0xFFF5F5F5),
-                                    child: const Icon(
-                                      Icons.image_not_supported,
-                                      color: Color(0xFFBDBDBD),
+                                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                    child: Icon(
+                                      Iconsax.gallery_slash,
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                                       size: 20,
                                     ),
                                   ),
                           ),
                         );
                       }),
-                      if (items.length > 3) ...[
+                      if (items.length > 3) ...[ 
                         const SizedBox(width: 8),
                         Container(
-                          width: 56,
-                          height: 56,
+                          width: 60,
+                          height: 60,
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
                               width: 1,
                             ),
                           ),
                           child: Center(
                             child: Text(
                               '+${items.length - 3}',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
+                              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ),
@@ -417,97 +403,39 @@ class _ModernOrderCard extends StatelessWidget {
                   const SizedBox(height: 16),
                 ],
                 
-                // Items count and total section
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
-                        Theme.of(context).colorScheme.secondary.withValues(alpha: 0.04),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Iconsax.shopping_bag,
-                            size: 18,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${items.length} ${items.length == 1 ? 'Item' : 'Items'}',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            'Total',
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '₹${totalAmount.toStringAsFixed(0)}',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: Theme.of(context).colorScheme.primary,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                // Divider
+                Divider(
+                  height: 1,
+                  color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
                 ),
                 
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 
-                // View details button
+                // Items count and total
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                    Row(
+                      children: [
+                        Icon(
+                          Iconsax.box,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${items.length} ${items.length == 1 ? 'Item' : 'Items'}',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'View Details',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(
-                              Iconsax.arrow_right_3,
-                              size: 16,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ],
-                        ),
+                      ],
+                    ),
+                    Text(
+                      '₹${totalAmount.toStringAsFixed(0)}',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
                       ),
                     ),
                   ],
@@ -520,4 +448,3 @@ class _ModernOrderCard extends StatelessWidget {
     );
   }
 }
-

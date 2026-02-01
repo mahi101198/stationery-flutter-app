@@ -5,6 +5,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:rps_stationery/data/models/cart_model.dart';
+import 'package:rps_stationery/data/models/product_model.dart';
 import 'package:rps_stationery/data/models/user_model.dart';
 import 'package:rps_stationery/data/services/cart_wishlist_service.dart';
 import 'package:rps_stationery/data/services/product_cache_service.dart';
@@ -57,14 +58,15 @@ class RazorpayPaymentService extends GetxController {
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
   }
 
-  /// Prepare order items with full product details
+  /// Prepare order items with full product details and CORRECT MRP-based pricing
+  /// ✅ Fixed to use productBasePrice (MRP) not selling price for calculations
   Future<List<Map<String, dynamic>>> _prepareOrderItems(
     List<CartItem> cartItems, {
     bool isBuyNow = false,
     Map<String, dynamic>? buyNowData,
   }) async {
     try {
-      print('🔍 Preparing order items with product details...');
+      print('🔍 Preparing order items with COMPLETE product & pricing details...');
       print('🔍 Is Buy Now: $isBuyNow');
       print('🔍 Cart items count: ${cartItems.length}');
       
@@ -74,67 +76,78 @@ class RazorpayPaymentService extends GetxController {
         final quantity = buyNowData['quantity'] ?? 1;
         final selectedColor = buyNowData['selectedColor'];
         
-        print('🔍 Buy Now - Product: ${product.name}, Quantity: $quantity, Color: $selectedColor');
+        // Get base price (MRP) and current price (SKU selling price)
+        final productBasePrice = buyNowData['productBasePrice'] ?? product.price;
+        final productCurrentPrice = buyNowData['productCurrentPrice'] ?? product.price;
+        
+        print('🔍 Buy Now - Product: ${product.name}, Qty: $quantity, BasePrice (MRP): $productBasePrice, CurrentPrice (SKU): $productCurrentPrice');
+        
+        // ✅ CORRECT PRICING CALCULATION (MRP-based)
+        final itemSubtotalAtMRP = productBasePrice * quantity;
+        final itemSubtotalAtSellingPrice = productCurrentPrice * quantity;
+        final itemAutoDiscount = itemSubtotalAtMRP - itemSubtotalAtSellingPrice;
+        
+        print('✅ Item pricing:');
+        print('   - itemSubtotalAtMRP: $itemSubtotalAtMRP');
+        print('   - itemSubtotalAtSellingPrice: $itemSubtotalAtSellingPrice');
+        print('   - itemAutoDiscount: $itemAutoDiscount');
         
         return [{
           'productId': product.productId,
+          'skuId': buyNowData['skuId'] ?? product.productId,
           'quantity': quantity,
           'name': product.name,
-          'price': product.price,
+          'category': product.category,
+          'brand': product.brand,
+          'productBasePrice': productBasePrice,           // MRP
+          'productCurrentPrice': productCurrentPrice,     // SKU selling price
+          'itemSubtotalAtMRP': itemSubtotalAtMRP,         // base price × qty
+          'itemSubtotalAtSellingPrice': itemSubtotalAtSellingPrice, // selling price × qty
+          'itemAutoDiscount': itemAutoDiscount,           // discount per item (MRP - selling)
           'productImage': product.displayImage,
-          'discountPrice': product.price,
           if (selectedColor != null) 'selectedColor': selectedColor,
+          'variants': buyNowData['variants'] ?? {},
         }];
       } else {
         // Handle regular cart flow
-        // Get all product IDs from cart items
-        final cartProductIds = cartItems.map((item) => item.productId).toList();
-        print('🔍 Cart product IDs (may include SKUs): $cartProductIds');
+        // ✅ NEW APPROACH: Use comprehensive cart data instead of looking up products
+        // Cart items now contain all product+SKU information needed for checkout
+        print('🔍 Cart items contain comprehensive product+SKU data');
         
-        // Fetch product details
-        print('🔍 Fetching product details for IDs...');
-        final products = await _productService.getProductsByIds(cartProductIds);
-        print('🔍 ✅ Fetched ${products.length} products from ${cartProductIds.length} IDs');
-        
-        // Debug: Show what we got
-        for (int i = 0; i < products.length; i++) {
-          print('   Product $i: ${products[i].name} (ID: ${products[i].productId})');
-        }
-        
-        // Create order items with full product details
+        // Create order items directly from cart data (no product lookup needed!)
         final orderItems = cartItems.map((cartItem) {
-          // Find the corresponding product
-          final product = products.firstWhereOrNull((p) => p.productId == cartItem.productId);
+          print('✅ Cart item: ${cartItem.title} (SKU: ${cartItem.skuId})');
+          print('   Price: ₹${cartItem.price}, MRP: ₹${cartItem.mrp}');
           
-          if (product != null) {
-            print('✅ Found product details for ${cartItem.productId}: ${product.name}, Image: ${product.displayImage}');
-            return {
-              'productId': cartItem.productId,
-              'quantity': cartItem.quantity,
-              'name': product.name,
-              'price': product.price,
-              'productImage': product.displayImage,
-              'discountPrice': product.price,
-              if (cartItem.selectedColor != null) 'selectedColor': cartItem.selectedColor,
-            };
-          } else {
-            print('⚠️ Product details NOT found for ${cartItem.productId}, using fallback');
-            print('   Cart item SKU/ID: ${cartItem.productId}');
-            print('   Available products: ${products.map((p) => p.productId).toList()}');
-            
-            return {
-              'productId': cartItem.productId,
-              'quantity': cartItem.quantity,
-              'name': 'Product ${cartItem.productId}',
-              'price': 0.0,
-              'productImage': '',
-              'discountPrice': 0.0,
-              if (cartItem.selectedColor != null) 'selectedColor': cartItem.selectedColor,
-            };
-          }
+          // ✅ CORRECT PRICING CALCULATION (from cart data)
+          final itemSubtotalAtMRP = cartItem.mrp * cartItem.quantity;
+          final itemSubtotalAtSellingPrice = cartItem.price * cartItem.quantity;
+          final itemAutoDiscount = itemSubtotalAtMRP - itemSubtotalAtSellingPrice;
+          
+          print('✅ Pricing calculated:');
+          print('   - itemSubtotalAtMRP: $itemSubtotalAtMRP');
+          print('   - itemSubtotalAtSellingPrice: $itemSubtotalAtSellingPrice');
+          print('   - itemAutoDiscount: $itemAutoDiscount');
+          
+          return {
+            'productId': cartItem.productId,                              // Base product ID
+            'skuId': cartItem.skuId,                                      // Full SKU ID
+            'quantity': cartItem.quantity,
+            'name': cartItem.title,
+            'category': 'Stationery', // Could be enhanced in cart model later
+            'brand': 'Generic', // Could be enhanced in cart model later
+            'productBasePrice': cartItem.mrp,                             // MRP from cart
+            'productCurrentPrice': cartItem.price,                       // Current price from cart
+            'itemSubtotalAtMRP': itemSubtotalAtMRP,                       // MRP × qty
+            'itemSubtotalAtSellingPrice': itemSubtotalAtSellingPrice,     // Price × qty
+            'itemAutoDiscount': itemAutoDiscount,                         // Discount per item
+            'productImage': cartItem.imageUrl,
+            if (cartItem.selectedColor != null) 'selectedColor': cartItem.selectedColor,
+            'variants': {'sku': cartItem.skuId},
+          };
         }).toList();
         
-        print('🔍 Prepared ${orderItems.length} order items');
+        print('🔍 Prepared ${orderItems.length} order items from cart data (no product lookup!)');
         return orderItems;
       }
     } catch (e) {
@@ -146,20 +159,28 @@ class RazorpayPaymentService extends GetxController {
         final quantity = buyNowData['quantity'] ?? 1;
         return [{
           'productId': product.productId,
+          'skuId': product.productId,
           'quantity': quantity,
           'name': product.name,
-          'price': product.price,
+          'productBasePrice': product.price,
+          'productCurrentPrice': product.price,
+          'itemSubtotalAtMRP': product.price * quantity,
+          'itemSubtotalAtSellingPrice': product.price * quantity,
+          'itemAutoDiscount': 0.0,
           'productImage': product.displayImage,
-          'discountPrice': product.price,
         }];
       } else {
         return cartItems.map((item) => {
           'productId': item.productId,
+          'skuId': item.productId,
           'quantity': item.quantity,
           'name': 'Product ${item.productId}',
-          'price': 0.0,
+          'productBasePrice': 0.0,
+          'productCurrentPrice': 0.0,
+          'itemSubtotalAtMRP': 0.0,
+          'itemSubtotalAtSellingPrice': 0.0,
+          'itemAutoDiscount': 0.0,
           'productImage': '',
-          'discountPrice': 0.0,
         }).toList();
       }
     }
@@ -198,7 +219,7 @@ class RazorpayPaymentService extends GetxController {
       
       print('🚀 Initiating $paymentMode payment for amount: $finalPayable');
 
-      // Prepare items for Firebase Function with full product details
+      // Prepare items for Firebase Function with comprehensive cart data
       final items = await _prepareOrderItems(cartItems, isBuyNow: isBuyNow, buyNowData: buyNowData);
 
       print('🔍 Prepared items for Firebase Function:');
@@ -206,7 +227,9 @@ class RazorpayPaymentService extends GetxController {
         print('  Item $i: ${items[i]}');
         print('    - productId: ${items[i]['productId']}');
         print('    - name: ${items[i]['name']}');
-        print('    - price: ${items[i]['price']}');
+        print('    - productBasePrice: ${items[i]['productBasePrice']}');
+        print('    - productCurrentPrice: ${items[i]['productCurrentPrice']}');
+        print('    - itemSubtotalAtMRP: ${items[i]['itemSubtotalAtMRP']}');
         print('    - productImage: ${items[i]['productImage']}');
         if (items[i].containsKey('selectedColor')) {
           print('    - selectedColor: ${items[i]['selectedColor']} ✅');
@@ -214,6 +237,59 @@ class RazorpayPaymentService extends GetxController {
           print('    - selectedColor: NOT INCLUDED IN PAYLOAD ❌');
         }
       }
+
+      // 🔴 VALIDATION: Ensure all items have valid prices before proceeding
+      print('🔍 ════════════════════════════════════════════════════════');
+      print('🔍 VALIDATING ITEM PRICES - CRITICAL CHECK');
+      print('🔍 ════════════════════════════════════════════════════════');
+      
+      bool hasInvalidPrices = false;
+      for (int i = 0; i < items.length; i++) {
+        final item = items[i];
+        final basePrice = (item['productBasePrice'] as num?) ?? 0;
+        final currentPrice = (item['productCurrentPrice'] as num?) ?? 0;
+        final itemSubtotal = (item['itemSubtotalAtMRP'] as num?) ?? 0;
+        
+        if (basePrice <= 0 || currentPrice <= 0 || itemSubtotal <= 0) {
+          print('❌ CRITICAL: Item $i (${item['name']}) has ZERO or INVALID prices!');
+          print('   - productBasePrice: $basePrice (should be > 0)');
+          print('   - productCurrentPrice: $currentPrice (should be > 0)');
+          print('   - itemSubtotalAtMRP: $itemSubtotal (should be > 0)');
+          print('   - SKU ID: ${item['skuId']}');
+          print('   - Product ID: ${item['productId']}');
+          hasInvalidPrices = true;
+        } else {
+          print('✅ Item $i (${item['name']}): BasePrice=$basePrice, CurrentPrice=$currentPrice, Subtotal=$itemSubtotal');
+        }
+      }
+      
+      if (hasInvalidPrices) {
+        print('❌ ════════════════════════════════════════════════════════');
+        print('❌ PRODUCT FETCH FAILED - PRICES ARE 0');
+        print('❌ ════════════════════════════════════════════════════════');
+        print('❌ Cannot proceed with order creation - products not loaded with prices');
+        print('❌ This likely means:');
+        print('❌   1. Product document exists but product_skus array is missing');
+        print('❌   2. SKU ID doesn\'t exist in the product_skus array');
+        print('❌   3. Product document is incomplete or corrupt');
+        print('❌ ');
+        print('❌ FIX: Check your Firestore product_details collection:');
+        for (int i = 0; i < items.length; i++) {
+          if (((items[i]['productBasePrice'] as num?) ?? 0) <= 0) {
+            print('❌   - Product: ${items[i]['productId']}');
+            print('❌   - SKU: ${items[i]['skuId']}');
+            print('❌   - Ensure product_skus array contains this SKU with valid price');
+          }
+        }
+        print('❌ ════════════════════════════════════════════════════════');
+        
+        _isProcessingPayment.value = false;
+        throw Exception('Product prices not loaded. All product items have 0 price. Please ensure products are properly cached before checkout.');
+      }
+      
+      print('✅ ════════════════════════════════════════════════════════');
+      print('✅ ALL ITEM PRICES ARE VALID - Proceeding to Firebase');
+      print('✅ ════════════════════════════════════════════════════════');
 
       // Prepare delivery address
       final addressData = {
@@ -225,49 +301,291 @@ class RazorpayPaymentService extends GetxController {
         'state': deliveryAddress.state,
         'postalCode': deliveryAddress.pincode,
         'country': deliveryAddress.country,
-        'isDefault': deliveryAddress.isDefault,
-        'landmark': deliveryAddress.landmark,
-        'email': deliveryAddress.email,
       };
 
-      // Prepare amountSummary object as per backend requirements
-      final amountSummary = {
-        'subTotal': subTotal,
-        'discount': discount,
-        'walletUsed': walletUsed,
-        'deliveryFee': deliveryFee,
-        'finalPayable': finalPayable,
-        'totalOrderAmount': totalAmount,
+      // 🔴 VALIDATION: Ensure delivery address has all required fields
+      print('🔍 ════════════════════════════════════════════════════════');
+      print('🔍 VALIDATING DELIVERY ADDRESS - CRITICAL CHECK');
+      print('🔍 ════════════════════════════════════════════════════════');
+      
+      final missingAddressFields = <String>[];
+      
+      if ((addressData['id'] as String?)?.isEmpty ?? true) missingAddressFields.add('id');
+      if ((addressData['name'] as String?)?.isEmpty ?? true) missingAddressFields.add('name');
+      if ((addressData['phoneNumber'] as String?)?.isEmpty ?? true) missingAddressFields.add('phoneNumber');
+      if ((addressData['street'] as String?)?.isEmpty ?? true) missingAddressFields.add('street');
+      if ((addressData['city'] as String?)?.isEmpty ?? true) missingAddressFields.add('city');
+      if ((addressData['state'] as String?)?.isEmpty ?? true) missingAddressFields.add('state');
+      if ((addressData['postalCode'] as String?)?.isEmpty ?? true) missingAddressFields.add('postalCode');
+      if ((addressData['country'] as String?)?.isEmpty ?? true) missingAddressFields.add('country');
+      
+      if (missingAddressFields.isNotEmpty) {
+        print('❌ CRITICAL: Missing or empty address fields:');
+        for (var field in missingAddressFields) {
+          print('   ❌ $field: "${addressData[field]}"');
+        }
+        print('❌ ════════════════════════════════════════════════════════');
+        print('❌ Cannot proceed - delivery address incomplete');
+        print('❌ ════════════════════════════════════════════════════════');
+        
+        _isProcessingPayment.value = false;
+        throw Exception('Delivery address incomplete. Missing fields: ${missingAddressFields.join(", ")}');
+      }
+      
+      print('✅ Delivery Address Validation:');
+      addressData.forEach((k, v) => print('   ✅ $k: $v'));
+      print('✅ ════════════════════════════════════════════════════════');
+
+      // Calculate pricing summary with CORRECT formula (MRP-based, no double-counting)
+      // ✅ orderSubtotal = SUM(itemSubtotalAtMRP), NOT selling price
+      // ✅ totalDiscount deducted only ONCE from orderSubtotal
+      final double orderSubtotal = items.fold<double>(0, (sum, item) => 
+        sum + (item['itemSubtotalAtMRP'] as double? ?? 0));
+      
+      final double productDiscount = items.fold<double>(0, (sum, item) =>
+        sum + (item['itemAutoDiscount'] as double? ?? 0));
+      
+      final double totalDiscount = productDiscount + discount;
+      
+      final double subtotalAfterDiscount = orderSubtotal - totalDiscount;
+
+      // Calculate pricing summary with correct field names
+      final pricingSummary = {
+        'orderSubtotal': orderSubtotal,                      // ✅ SUM of MRP (base price)
+        'productDiscount': productDiscount,                  // ✅ Auto discount from price difference
+        'couponCode': couponCode,
+        'couponDiscount': discount,                          // ✅ Coupon discount amount
+        'totalDiscount': totalDiscount,                      // ✅ Total of all discounts (deducted once)
+        'subtotalAfterDiscount': subtotalAfterDiscount,      // ✅ After all discounts
+        'deliveryFee': deliveryFee,                          // ✅ Shipping cost
+        'totalBeforePayment': subtotalAfterDiscount + deliveryFee, // ✅ Final before payment mode split
       };
 
-      print('🔍 Prepared address data:');
-      print('   $addressData');
-      print('🔍 Amount Summary:');
-      print('   $amountSummary');
+      print('🔍 ════════════════════════════════════════════════════════');
+      print('🔍 CORRECTED PRICING CALCULATION (MRP-based, no double-counting)');
+      print('🔍 ════════════════════════════════════════════════════════');
+      print('  Calculation steps:');
+      print('    1. orderSubtotal (MRP basis) = ₹$orderSubtotal');
+      print('    2. productDiscount (auto) = ₹$productDiscount');
+      print('    3. couponDiscount = ₹$discount');
+      print('    4. totalDiscount = ₹$totalDiscount (deducted once)');
+      print('    5. subtotalAfterDiscount = ₹$orderSubtotal - ₹$totalDiscount = ₹$subtotalAfterDiscount');
+      print('    6. deliveryFee = ₹$deliveryFee');
+      print('    7. totalBeforePayment = ₹$subtotalAfterDiscount + ₹$deliveryFee = ₹${subtotalAfterDiscount + deliveryFee}');
+      print('🔍 ════════════════════════════════════════════════════════');
+      
+      // Calculate payment summary
+      final double onlinePaidAmount = (subtotalAfterDiscount + deliveryFee) - walletUsed;
+      final double totalOrderValue = subtotalAfterDiscount + deliveryFee;
+      
+      final paymentSummary = {
+        'paymentMode': paymentMode,
+        'walletPaidAmount': walletUsed,                      // Amount paid from wallet
+        'onlinePaidAmount': onlinePaidAmount,                // Amount paid online (Razorpay/COD)
+        'totalOrderValue': totalOrderValue,                  // Grand total
+      };
+
+      print('🔍 Pricing Summary:');
+      pricingSummary.forEach((key, value) => print('   $key: $value'));
+      print('🔍 Payment Summary:');
+      paymentSummary.forEach((key, value) => print('   $key: $value'));
+
+      // Extract validation variables
+      final double totalBeforePayment = subtotalAfterDiscount + deliveryFee;
+      final double walletPaidAmount = walletUsed;
+
+      // 🔴 VALIDATION: Ensure all pricing values are valid before calling Firebase
+      print('🔍 ════════════════════════════════════════════════════════');
+      print('🔍 VALIDATING PRICING DATA - CRITICAL CHECK');
+      print('🔍 ════════════════════════════════════════════════════════');
+      
+      final validationErrors = <String>[];
+      
+      // Check pricing summary
+      if (orderSubtotal <= 0) {
+        validationErrors.add('orderSubtotal must be > 0, got: $orderSubtotal');
+      }
+      if (totalDiscount < 0) {
+        validationErrors.add('totalDiscount cannot be negative, got: $totalDiscount');
+      }
+      if (deliveryFee < 0) {
+        validationErrors.add('deliveryFee cannot be negative, got: $deliveryFee');
+      }
+      if (totalBeforePayment <= 0) {
+        validationErrors.add('totalBeforePayment must be > 0, got: $totalBeforePayment');
+      }
+      
+      // Check payment summary
+      if (totalOrderValue <= 0) {
+        validationErrors.add('totalOrderValue must be > 0, got: $totalOrderValue');
+      }
+      if (walletPaidAmount < 0) {
+        validationErrors.add('walletPaidAmount cannot be negative, got: $walletPaidAmount');
+      }
+      if (onlinePaidAmount < 0) {
+        validationErrors.add('onlinePaidAmount cannot be negative, got: $onlinePaidAmount');
+      }
+      
+      // Validate formulas
+      final expectedSubtotalAfterDiscount = orderSubtotal - totalDiscount;
+      if ((subtotalAfterDiscount - expectedSubtotalAfterDiscount).abs() > 0.01) {
+        validationErrors.add('subtotalAfterDiscount formula error: expected $expectedSubtotalAfterDiscount, got $subtotalAfterDiscount');
+      }
+      
+      final expectedTotalBeforePayment = subtotalAfterDiscount + deliveryFee;
+      if ((totalBeforePayment - expectedTotalBeforePayment).abs() > 0.01) {
+        validationErrors.add('totalBeforePayment formula error: expected $expectedTotalBeforePayment, got $totalBeforePayment');
+      }
+      
+      if (validationErrors.isNotEmpty) {
+        print('❌ CRITICAL: Pricing validation failed!');
+        for (var error in validationErrors) {
+          print('   ❌ $error');
+        }
+        print('❌ ════════════════════════════════════════════════════════');
+        
+        _isProcessingPayment.value = false;
+        throw Exception('Pricing validation failed: ${validationErrors.join("; ")}');
+      }
+      
+      print('✅ All pricing validations passed!');
+      print('   ✅ orderSubtotal: $orderSubtotal > 0');
+      print('   ✅ totalDiscount: $totalDiscount >= 0');
+      print('   ✅ deliveryFee: $deliveryFee >= 0');
+      print('   ✅ totalBeforePayment: $totalBeforePayment > 0');
+      print('   ✅ totalOrderValue: $totalOrderValue > 0');
+      print('   ✅ Pricing formulas are correct');
+      print('✅ ════════════════════════════════════════════════════════');
+
+      // 🔴 VALIDATION: Ensure payment mode is consistent with wallet amounts
+      print('🔍 ════════════════════════════════════════════════════════');
+      print('🔍 VALIDATING PAYMENT MODE - CRITICAL CHECK');
+      print('🔍 ════════════════════════════════════════════════════════');
+      
+      final paymentModeErrors = <String>[];
+      
+      print('  Payment Mode: $paymentMode');
+      print('  Wallet Amount: $walletUsed');
+      print('  Online Amount: $onlinePaidAmount');
+      
+      if (paymentMode == 'razorpay') {
+        if (walletUsed != 0) {
+          paymentModeErrors.add('razorpay mode: walletPaidAmount must be 0, got $walletUsed');
+        }
+        if (onlinePaidAmount <= 0) {
+          paymentModeErrors.add('razorpay mode: onlinePaidAmount must be > 0, got $onlinePaidAmount');
+        }
+      } else if (paymentMode == 'cod') {
+        if (walletUsed != 0) {
+          paymentModeErrors.add('cod mode: walletPaidAmount must be 0, got $walletUsed');
+        }
+        if (onlinePaidAmount <= 0) {
+          paymentModeErrors.add('cod mode: onlinePaidAmount must be > 0, got $onlinePaidAmount');
+        }
+      } else if (paymentMode == 'wallet') {
+        if (walletUsed <= 0) {
+          paymentModeErrors.add('wallet mode: walletPaidAmount must be > 0, got $walletUsed');
+        }
+        if (onlinePaidAmount != 0) {
+          paymentModeErrors.add('wallet mode: onlinePaidAmount must be 0, got $onlinePaidAmount');
+        }
+      } else if (paymentMode == 'partial_wallet') {
+        if (walletUsed <= 0) {
+          paymentModeErrors.add('partial_wallet mode: walletPaidAmount must be > 0, got $walletUsed');
+        }
+        if (onlinePaidAmount <= 0) {
+          paymentModeErrors.add('partial_wallet mode: onlinePaidAmount must be > 0, got $onlinePaidAmount');
+        }
+        final expectedTotal = walletUsed + onlinePaidAmount;
+        if ((expectedTotal - totalOrderValue).abs() > 0.01) {
+          paymentModeErrors.add('partial_wallet mode: wallet + online ($walletUsed + $onlinePaidAmount = $expectedTotal) must equal totalOrderValue ($totalOrderValue)');
+        }
+      } else {
+        paymentModeErrors.add('Invalid payment mode: $paymentMode. Must be one of: razorpay, cod, wallet, partial_wallet');
+      }
+      
+      if (paymentModeErrors.isNotEmpty) {
+        print('❌ CRITICAL: Payment mode validation failed!');
+        for (var error in paymentModeErrors) {
+          print('   ❌ $error');
+        }
+        print('❌ ════════════════════════════════════════════════════════');
+        
+        _isProcessingPayment.value = false;
+        throw Exception('Payment mode validation failed: ${paymentModeErrors.join("; ")}');
+      }
+      
+      print('✅ Payment mode validation passed!');
+      print('   ✅ paymentMode: $paymentMode is valid');
+      if (paymentMode == 'razorpay') print('   ✅ razorpay: wallet = 0, online > 0');
+      if (paymentMode == 'cod') print('   ✅ cod: wallet = 0, online > 0');
+      if (paymentMode == 'wallet') print('   ✅ wallet: wallet > 0, online = 0');
+      if (paymentMode == 'partial_wallet') print('   ✅ partial_wallet: wallet > 0, online > 0, both required');
+      print('✅ ════════════════════════════════════════════════════════');
 
       // Call Firebase Function to create order
       print('🔍 ════════════════════════════════════════════════════════');
       print('🔍 CALLING FIREBASE FUNCTION: createOrder');
       print('🔍 ════════════════════════════════════════════════════════');
-      print('🔍 Request payload being sent:');
-      print('  📦 items: $items');
-      print('  💰 amountSummary: $amountSummary');
-      print('  💱 currency: INR');
-      print('  💳 paymentMode: $paymentMode');
-      print('  📍 deliveryAddress: $addressData');
-      print('  🎟️ couponCode: $couponCode');
-      print('🔍 ════════════════════════════════════════════════════════');
+      
+      // 📦 COMPLETE PAYLOAD LOGGING - Exactly what is sent to Firebase
+      print('📦 ════════════════════════════════════════════════════════');
+      print('📦 COMPLETE PAYLOAD BEING SENT TO FIREBASE:');
+      print('📦 ════════════════════════════════════════════════════════');
+      
+      final payload = {
+        'items': items,
+        'pricingSummary': pricingSummary,
+        'paymentSummary': paymentSummary,
+        'deliveryAddress': addressData,
+        'currency': 'INR',
+        'paymentMode': paymentMode,
+      };
+      
+      print('📦 Items Count: ${items.length}');
+      print('📦 Items Details:');
+      for (int i = 0; i < items.length; i++) {
+        final item = items[i];
+        print('   📦 [$i] productId: ${item['productId']}, sku: ${item['sku']}, name: ${item['productName']}, qty: ${item['quantity']}, price: ${item['price']}');
+      }
+      
+      print('');
+      print('📦 Pricing Summary:');
+      pricingSummary.forEach((k, v) => print('   📦 $k: $v'));
+      
+      print('');
+      print('📦 Payment Summary:');
+      paymentSummary.forEach((k, v) => print('   📦 $k: $v'));
+      
+      print('');
+      print('📦 Delivery Address:');
+      addressData.forEach((k, v) => print('   📦 $k: $v'));
+      
+      print('');
+      print('📦 Additional Fields:');
+      print('   📦 currency: INR');
+      print('   📦 paymentMode: $paymentMode');
+      
+      print('📦 ════════════════════════════════════════════════════════');
+      print('📦 PAYLOAD SUMMARY:');
+      print('   📦 Total Items: ${items.length}');
+      print('   📦 Subtotal: ${pricingSummary['orderSubtotal']} INR');
+      print('   📦 Discount: ${pricingSummary['totalDiscount']} INR');
+      print('   📦 Delivery Fee: ${pricingSummary['deliveryFee']} INR');
+      print('   📦 Final Amount: ${paymentSummary['totalOrderValue']} INR');
+      print('   📦 Payment Mode: $paymentMode');
+      print('📦 ════════════════════════════════════════════════════════');
       
       final callable = _functions.httpsCallable('createOrder');
       print('⏳ WAITING FOR FIREBASE FUNCTION RESPONSE...');
       
       final result = await callable.call({
         'items': items,
-        'amountSummary': amountSummary,
+        'pricingSummary': pricingSummary,
+        'paymentSummary': paymentSummary,
         'currency': 'INR',
         'paymentMode': paymentMode,
         'deliveryAddress': addressData,
-        'couponCode': couponCode,
       });
 
       print('✅ ════════════════════════════════════════════════════════');

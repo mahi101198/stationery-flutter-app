@@ -47,284 +47,63 @@ class _CartProductState extends State<CartProduct> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Stack(
       children: [
         Column(
           children: [
-            // Flat card design with subtle border - matching reference image
+            // Two-column card design matching reference image
             Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
+                color: theme.cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Color(0xFFE8E8E9),
+                  color: theme.colorScheme.outlineVariant,
                   width: 1,
                 ),
               ),
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.all(12),
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () => Get.toNamed(Routes.productDetail, arguments: widget.product.id),
                   borderRadius: BorderRadius.circular(12),
-                  child: Column(
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Top Row: Image + Title/Subtitle Column
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Product Image - left side
-                          SizedBox(
-                            width: 64,
-                            height: 64,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Color(0xFFF0F0F1),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: widget.product.displayImage.isNotEmpty
-                                    ? Image.network(
-                                        widget.product.displayImage,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return Container(
-                                            color: Color(0xFFF0F0F1),
-                                            child: Center(
-                                              child: Icon(
-                                                Icons.image_not_supported,
-                                                size: 24,
-                                                color: Color(0xFFD0D0D2),
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                        loadingBuilder: (context, child, loadingProgress) {
-                                          if (loadingProgress == null) return child;
-                                          return Container(
-                                            color: Color(0xFFF0F0F1),
-                                            child: Center(
-                                              child: SizedBox(
-                                                width: 18,
-                                                height: 18,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 1.5,
-                                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                                    Color(0xFFD0D0D2),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      )
-                                    : Container(
-                                        color: Color(0xFFF0F0F1),
-                                        child: Center(
-                                          child: Icon(
-                                            Icons.image_not_supported,
-                                            size: 24,
-                                            color: Color(0xFFD0D0D2),
-                                          ),
-                                        ),
-                                      ),
-                              ),
-                            ),
-                          ),
-                          
-                          SizedBox(width: 14),
-                          
-                          // Title + Subtitle Column
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Product name
-                                Text(
-                                  widget.product.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF1A1A1A),
-                                    height: 1.3,
-                                    letterSpacing: -0.2,
-                                  ),
-                                ),
-                                
-                                SizedBox(height: 4),
-                                
-                                // Subtitle
-                                Text(
-                                  (widget.product.subtitle?.isNotEmpty ?? false) 
-                                      ? widget.product.subtitle! 
-                                      : (widget.selectedColor ?? ''),
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w400,
-                                    color: Color(0xFF8E8E93),
-                                    height: 1.2,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                      // COLUMN 1: Product Image (Left) - STATIC, no rebuilds
+                      _buildProductImage(theme, isDark),
                       
-                      SizedBox(height: 12),
+                      SizedBox(width: 12),
                       
-                      // Bottom Row: Quantity Selector (LEFT) + Price (RIGHT)
-                      // Wrapped with Obx for real-time updates without rebuilding entire widget
-                      Obx(() {
-                        // Get current quantity from controller using SKU ID
-                        final cartItem = controller.cartItems.firstWhereOrNull(
-                          (item) => item.productId == widget.skuId
-                        );
-                        final currentQuantity = cartItem?.quantity ?? widget.quantity;
-                        
-                        // Find data for this SKU to check limits
-                        final sku = widget.product.productSkus.firstWhereOrNull(
-                          (s) => s.skuId == widget.skuId
-                        );
-                        final maxLimit = sku?.maxPerOrder ?? 999;
-                        final isLimitReached = currentQuantity >= maxLimit;
-
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      // COLUMN 2: Content (Right) - Title, Quantity + Price
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Premium Circular Quantity Selector - 3 separate circular boxes
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Minus button - circular
-                                Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: () => controller.updateCartItemQuantity(
-                                      widget.skuId, 
-                                      currentQuantity - 1,
-                                      productContext: widget.product,
-                                    ),
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: Container(
-                                      width: 32,
-                                      height: 32,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(16), // Circular
-                                        border: Border.all(
-                                          color: currentQuantity == 1 
-                                              ? Color(0xFFC91C3D).withValues(alpha: 0.3)
-                                              : Color(0xFF6B8FA3).withValues(alpha: 0.4), // Blue shade
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Center(
-                                        child: Icon(
-                                          currentQuantity == 1 ? Iconsax.trash : Iconsax.minus,
-                                          size: 16,
-                                          color: currentQuantity == 1 
-                                              ? Color(0xFFC91C3D)
-                                              : Color(0xFF6B8FA3),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                
-                                SizedBox(width: 10),
-                                
-                                // Quantity display - circular (updates in real-time)
-                                Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16), // Circular
-                                    border: Border.all(
-                                      color: Color(0xFF6B8FA3).withValues(alpha: 0.4), // Blue shade
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      currentQuantity.toString(),
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF1A1A1A),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                
-                                SizedBox(width: 10),
-                                
-                                // Plus button - circular
-                                Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: isLimitReached
-                                      ? () {
-                                          // Show gentle toast when at limit
-                                          TLoaders.customToast(
-                                            message: "Maximum $maxLimit units per order",
-                                          );
-                                        }
-                                      : () => controller.updateCartItemQuantity(
-                                        widget.skuId, 
-                                        currentQuantity + 1,
-                                        productContext: widget.product,
-                                      ),
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: Container(
-                                      width: 32,
-                                      height: 32,
-                                      decoration: BoxDecoration(
-                                        color: isLimitReached ? Colors.grey[100] : Colors.white,
-                                        borderRadius: BorderRadius.circular(16), // Circular
-                                        border: Border.all(
-                                          color: isLimitReached
-                                              ? Colors.grey[300]!
-                                              : Color(0xFF6B8FA3).withValues(alpha: 0.4), // Blue shade
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Center(
-                                        child: Icon(
-                                          Iconsax.add,
-                                          size: 16,
-                                          color: isLimitReached 
-                                              ? Colors.grey[400] 
-                                              : Color(0xFF6B8FA3),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            // Product Title (Single line with ellipsis) - STATIC
+                            Text(
+                              widget.product.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                                height: 1.3,
+                                letterSpacing: -0.1,
+                              ),
                             ),
                             
-                            // Price - right side of quantity selector row (updates in real-time)
-                            Text(
-                              '₹${(widget.product.price * currentQuantity).toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF1A1A1A),
-                                letterSpacing: -0.3,
-                              ),
-                            ),
+                            SizedBox(height: 12),
+                            
+                            // Quantity Selector + Price (Only this part will rebuild)
+                            _buildQuantityAndPrice(theme),
                           ],
-                        );
-                      }),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -345,22 +124,24 @@ class _CartProductState extends State<CartProduct> {
           return Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.7),
+                color: theme.cardColor.withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
                 child: Container(
-                  padding: EdgeInsets.all(10),
+                  padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Color(0xFF6B8FA3).withValues(alpha: 0.95),
+                    color: theme.colorScheme.primary,
                     shape: BoxShape.circle,
                   ),
                   child: SizedBox(
-                    width: 18,
-                    height: 18,
+                    width: 20,
+                    height: 20,
                     child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        theme.colorScheme.onPrimary,
+                      ),
                     ),
                   ),
                 ),
@@ -370,5 +151,205 @@ class _CartProductState extends State<CartProduct> {
         }),
       ],
     );
+  }
+
+  /// Build product image - STATIC component (no rebuilds)
+  Widget _buildProductImage(ThemeData theme, bool isDark) {
+    return Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        color: isDark 
+            ? theme.colorScheme.surfaceContainerHighest
+            : Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: widget.product.displayImage.isNotEmpty
+            ? NetworkImageWithLoader(
+                widget.product.displayImage,
+                fit: BoxFit.cover,
+                radius: 8,
+              )
+            : Center(
+                child: Icon(
+                  Icons.image_not_supported_outlined,
+                  size: 28,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+      ),
+    );
+  }
+
+  /// Build quantity and price section - DYNAMIC component (will rebuild)
+  Widget _buildQuantityAndPrice(ThemeData theme) {
+    return Obx(() {
+      // Get current quantity from controller using SKU ID
+      final cartItem = controller.cartItems.firstWhereOrNull(
+        (item) => item.skuId == widget.skuId
+      );
+      final currentQuantity = cartItem?.quantity ?? widget.quantity;
+      
+      // Find data for this SKU to check limits
+      final sku = widget.product.productSkus.firstWhereOrNull(
+        (s) => s.skuId == widget.skuId
+      );
+      final maxLimit = sku?.maxPerOrder ?? 999;
+      final isLimitReached = currentQuantity >= maxLimit;
+      final totalPrice = _getSkuPrice() * currentQuantity;
+
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Quantity Selector - Circular buttons with blue border
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Minus button (removes item when qty = 1)
+              _buildCircularButton(
+                context: context,
+                icon: Iconsax.minus,
+                onTap: () => controller.updateCartItemQuantity(
+                  widget.skuId, 
+                  currentQuantity - 1,
+                  productContext: widget.product,
+                ),
+                theme: theme,
+              ),
+              
+              SizedBox(width: 8),
+              
+              // Quantity display - circular with blue border
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                    width: 1.5,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    currentQuantity.toString(),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ),
+              
+              SizedBox(width: 8),
+              
+              // Plus button
+              _buildCircularButton(
+                context: context,
+                icon: Iconsax.add,
+                onTap: isLimitReached
+                  ? () {
+                      TLoaders.customToast(
+                        message: "Maximum $maxLimit units per order",
+                      );
+                    }
+                  : () => controller.updateCartItemQuantity(
+                    widget.skuId, 
+                    currentQuantity + 1,
+                    productContext: widget.product,
+                  ),
+                isDisabled: isLimitReached,
+                theme: theme,
+              ),
+            ],
+          ),
+          
+          // Price with gradient color (INR)
+          ShaderMask(
+            shaderCallback: (bounds) => LinearGradient(
+              colors: [
+                theme.colorScheme.primary,
+                theme.colorScheme.secondary,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ).createShader(bounds),
+            child: Text(
+              '₹${totalPrice.toStringAsFixed(2)}',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+                color: Colors.white, // Required for ShaderMask
+                letterSpacing: -0.2,
+              ),
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  /// Build circular button for quantity selector
+  Widget _buildCircularButton({
+    required BuildContext context,
+    required IconData icon,
+    required VoidCallback onTap,
+    bool isDisabled = false,
+    required ThemeData theme,
+  }) {
+    final Color borderColor = isDisabled
+        ? theme.colorScheme.outline.withValues(alpha: 0.3)
+        : theme.colorScheme.primary.withValues(alpha: 0.4);
+    
+    final Color iconColor = isDisabled
+        ? theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
+        : theme.colorScheme.primary;
+    
+    final Color backgroundColor = isDisabled 
+        ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
+        : theme.colorScheme.primary.withValues(alpha: 0.08);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: borderColor,
+              width: 1.5,
+            ),
+          ),
+          child: Center(
+            child: Icon(
+              icon,
+              size: 16,
+              color: iconColor,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Get SKU-specific price from product
+  double _getSkuPrice() {
+    // Find the SKU that matches widget.skuId
+    final matchingSku = widget.product.productSkus.firstWhere(
+      (sku) => sku.skuId == widget.skuId,
+      orElse: () => widget.product.productSkus.first, // Fallback to first SKU
+    );
+    
+    return matchingSku.price.toDouble();
   }
 }

@@ -19,12 +19,13 @@ import 'package:rps_stationery/features/home/controllers/banner_controller.dart'
 import 'package:rps_stationery/features/wishlist/controller.dart/wishlist_controller.dart';
 import 'package:rps_stationery/features/home/controllers/product_controller.dart';
 import 'package:rps_stationery/features/home/controllers/home_section_controller.dart';
-import 'package:rps_stationery/features/product/controllers/review_controller.dart';
+import 'package:rps_stationery/features/shop/controllers/review_controller.dart';
 import 'package:rps_stationery/data/repositories/category_repo.dart';
 import 'package:rps_stationery/data/repositories/home_section_repo.dart';
 import 'package:rps_stationery/data/repositories/banner_repo.dart';
 import 'package:rps_stationery/data/repositories/subcategory_repo.dart';
 import 'package:rps_stationery/data/repositories/review_repo.dart';
+import 'package:rps_stationery/data/repositories/product_repo.dart';
 import 'package:rps_stationery/data/services/subcategory_product_service.dart';
 
 class GeneralBindings extends Bindings {
@@ -77,6 +78,11 @@ class GeneralBindings extends Bindings {
     Get.put(BannerRepo(), permanent: true);
     Get.put(SubCategoryRepo(), permanent: true);
     Get.put(ReviewRepo(), permanent: true);
+    
+    // Legacy ProductRepo (keeping for gradual migration)
+    if (!Get.isRegistered<ProductRepo>()) {
+      Get.put(ProductRepo(), permanent: true);
+    }
     
     // Services
     Get.put(SubCategoryProductService(), permanent: true);

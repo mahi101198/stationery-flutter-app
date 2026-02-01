@@ -396,7 +396,7 @@ class ProductRepo extends GetxController {
 
       final items = itemsRaw
           .whereType<Map<String, dynamic>>()
-          .map((m) => CartItem(
+          .map((m) => CartItem.minimal(
                 productId: (m['productId'] ?? '') as String,
                 quantity: (m['quantity'] ?? 0) as int,
                 addedAt: DateTime.now(),
@@ -424,7 +424,7 @@ class ProductRepo extends GetxController {
 
           final items = itemsRaw
               .whereType<Map<String, dynamic>>()
-              .map((m) => CartItem(
+              .map((m) => CartItem.minimal(
                     productId: (m['productId'] ?? '') as String,
                     quantity: (m['quantity'] ?? 0) as int,
                     addedAt: DateTime.now(),

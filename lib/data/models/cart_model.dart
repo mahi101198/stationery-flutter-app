@@ -1,19 +1,40 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Cart item model following enterprise schema
+/// Cart item model with comprehensive product + SKU data
 /// 
-/// NOTE: In the new SKU-based architecture:
-/// - productId field now stores SKU IDs (e.g., "NB-BLUE-P1") instead of product IDs
-/// - Each SKU represents a unique purchasable item with its own pricing and inventory
-/// - selectedColor field is DEPRECATED - variant attributes are now part of the SKU
+/// Enhanced model that stores all necessary product information to avoid
+/// product lookups during checkout and ensure reliable order creation
 class CartItem {
-  final String productId; // Stores SKU ID (e.g., "NB-BLUE-P1")
-  final int quantity;
-  final DateTime addedAt;
+  // Core IDs
+  final String productId;     // Base product ID (e.g., "stapler-kangaro-hd10d")
+  final String skuId;         // Full SKU ID (e.g., "stapler-kangaro-hd10d-standard")
+  
+  // Product Information
+  final String title;         // Product title
+  final String subtitle;      // Product subtitle
+  final String imageUrl;      // Main product image URL
+  
+  // Pricing (SKU-specific)
+  final double price;         // Current selling price
+  final double mrp;           // Maximum retail price
+  final String currency;      // Currency (INR)
+  
+  // Cart specific
+  final int quantity;         // Quantity in cart
+  final DateTime addedAt;     // When added to cart
+  
+  // Legacy fields (for backward compatibility)
   final String? selectedColor;  // DEPRECATED: Use SKU attributes instead
 
   const CartItem({
     required this.productId,
+    required this.skuId,
+    required this.title,
+    required this.subtitle,
+    required this.imageUrl,
+    required this.price,
+    required this.mrp,
+    required this.currency,
     required this.quantity,
     required this.addedAt,
     this.selectedColor,
@@ -22,32 +43,109 @@ class CartItem {
   /// Convert to Firestore document
   Map<String, dynamic> toFirestore() {
     return {
+      // Core IDs
       'productId': productId,
+      'skuId': skuId,
+      
+      // Product Information
+      'title': title,
+      'subtitle': subtitle,
+      'imageUrl': imageUrl,
+      
+      // Pricing
+      'price': price,
+      'mrp': mrp,
+      'currency': currency,
+      
+      // Cart specific
       'quantity': quantity,
       'addedAt': Timestamp.fromDate(addedAt),
+      
+      // Legacy
       if (selectedColor != null) 'selectedColor': selectedColor,
     };
   }
 
-  /// Create from Firestore document
+  /// Create from Firestore document (handles both old and new formats)
   factory CartItem.fromFirestore(Map<String, dynamic> data) {
+    // Handle legacy format where only basic data was stored
+    if (!data.containsKey('skuId')) {
+      return CartItem(
+        productId: data['productId'] ?? '',
+        skuId: data['productId'] ?? '', // Fallback: use productId as skuId
+        title: 'Product ${data['productId'] ?? 'Unknown'}',
+        subtitle: 'Legacy cart item',
+        imageUrl: '',
+        price: 0.0,
+        mrp: 0.0,
+        currency: 'INR',
+        quantity: (data['quantity'] ?? 1).toInt(),
+        addedAt: _parseTimestamp(data['addedAt']),
+        selectedColor: data['selectedColor'] as String?,
+      );
+    }
+    
+    // New enhanced format
     return CartItem(
       productId: data['productId'] ?? '',
+      skuId: data['skuId'] ?? data['productId'] ?? '',
+      title: data['title'] ?? 'Unknown Product',
+      subtitle: data['subtitle'] ?? '',
+      imageUrl: data['imageUrl'] ?? '',
+      price: (data['price'] ?? 0.0).toDouble(),
+      mrp: (data['mrp'] ?? 0.0).toDouble(),
+      currency: data['currency'] ?? 'INR',
       quantity: (data['quantity'] ?? 1).toInt(),
       addedAt: _parseTimestamp(data['addedAt']),
       selectedColor: data['selectedColor'] as String?,
+    );
+  }
+  
+  /// Create minimal cart item for legacy support (Buy Now, etc.)
+  factory CartItem.minimal({
+    required String productId,
+    required int quantity,
+    required DateTime addedAt,
+    String? selectedColor,
+  }) {
+    return CartItem(
+      productId: productId,
+      skuId: productId, // Use productId as skuId for legacy
+      title: 'Product $productId',
+      subtitle: 'Minimal cart item',
+      imageUrl: '',
+      price: 0.0,
+      mrp: 0.0,
+      currency: 'INR',
+      quantity: quantity,
+      addedAt: addedAt,
+      selectedColor: selectedColor,
     );
   }
 
   /// Create copy with optional parameter overrides
   CartItem copyWith({
     String? productId,
+    String? skuId,
+    String? title,
+    String? subtitle,
+    String? imageUrl,
+    double? price,
+    double? mrp,
+    String? currency,
     int? quantity,
     DateTime? addedAt,
     String? selectedColor,
   }) {
     return CartItem(
       productId: productId ?? this.productId,
+      skuId: skuId ?? this.skuId,
+      title: title ?? this.title,
+      subtitle: subtitle ?? this.subtitle,
+      imageUrl: imageUrl ?? this.imageUrl,
+      price: price ?? this.price,
+      mrp: mrp ?? this.mrp,
+      currency: currency ?? this.currency,
       quantity: quantity ?? this.quantity,
       addedAt: addedAt ?? this.addedAt,
       selectedColor: selectedColor ?? this.selectedColor,
@@ -72,10 +170,16 @@ class CartItem {
       identical(this, other) ||
       other is CartItem &&
           runtimeType == other.runtimeType &&
-          productId == other.productId;
+          skuId == other.skuId; // Compare by SKU ID for uniqueness
 
   @override
-  int get hashCode => productId.hashCode;
+  int get hashCode => skuId.hashCode;
+  
+  /// Get total price for this cart item (price × quantity)
+  double get totalPrice => price * quantity;
+  
+  /// Get total discount for this cart item ((mrp - price) × quantity)
+  double get totalDiscount => (mrp - price) * quantity;
 }
 
 /// Cart model following enterprise schema
@@ -99,8 +203,17 @@ class CartModel {
   /// Check if cart is not empty
   bool get isNotEmpty => items.isNotEmpty;
 
-  /// Get item by product ID
-  CartItem? getItem(String productId) {
+  /// Get item by SKU ID (primary key)
+  CartItem? getItem(String skuId) {
+    try {
+      return items.firstWhere((item) => item.skuId == skuId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get item by product ID (may return first match if multiple SKUs)
+  CartItem? getItemByProductId(String productId) {
     try {
       return items.firstWhere((item) => item.productId == productId);
     } catch (e) {
@@ -108,10 +221,21 @@ class CartModel {
     }
   }
 
-  /// Check if product exists in cart
+  /// Check if SKU exists in cart
+  bool containsSku(String skuId) {
+    return items.any((item) => item.skuId == skuId);
+  }
+
+  /// Check if product exists in cart (any SKU of this product)
   bool containsProduct(String productId) {
     return items.any((item) => item.productId == productId);
   }
+  
+  /// Get total cart value (sum of all item totals)
+  double get totalValue => items.fold(0.0, (sum, item) => sum + item.totalPrice);
+  
+  /// Get total discount value
+  double get totalDiscount => items.fold(0.0, (sum, item) => sum + item.totalDiscount);
 
   /// Convert to Firestore document
   Map<String, dynamic> toFirestore() {

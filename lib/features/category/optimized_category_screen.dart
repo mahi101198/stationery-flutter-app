@@ -371,13 +371,13 @@ class _OptimizedCategoryScreenState extends State<OptimizedCategoryScreen> {
                                                       : Colors.grey.withValues(alpha: 0.1),
                                                   borderRadius: BorderRadius.circular(12),
                                                 ),
-                                                child: const Center(
+                                                child: Center(
                                                   child: SizedBox(
                                                     width: 16,
                                                     height: 16,
                                                     child: CircularProgressIndicator(
                                                       strokeWidth: 2,
-                                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
+                                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
                                                     ),
                                                   ),
                                                 ),
@@ -386,38 +386,22 @@ class _OptimizedCategoryScreenState extends State<OptimizedCategoryScreen> {
                                                 print('⚠️ Image load error for ${subCategory.name}: $error');
                                                 return Directionality(
                                                   textDirection: TextDirection.ltr,
-                                                  child: Container(
-                                                    decoration: BoxDecoration(
-                                                      color: isSelected
-                                                          ? Colors.white.withValues(alpha: 0.1)
-                                                          : Colors.grey.withValues(alpha: 0.2),
-                                                      borderRadius: BorderRadius.circular(12),
-                                                    ),
-                                                    child: const Center(
-                                                      child: Icon(
-                                                        Icons.category_outlined,
-                                                        color: Colors.white70,
-                                                        size: 20,
-                                                      ),
+                                                  child: Center(
+                                                    child: Icon(
+                                                      Icons.category_outlined,
+                                                      color: isSelected ? Colors.white : Colors.grey[600],
+                                                      size: 20,
                                                     ),
                                                   ),
                                                 );
                                               },
                                             ),
                                           )
-                                        : Container(
-                                            decoration: BoxDecoration(
-                                              color: isSelected
-                                                  ? Colors.white.withValues(alpha: 0.1)
-                                                  : Colors.grey.withValues(alpha: 0.2),
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            child: const Center(
-                                              child: Icon(
-                                                Icons.category_outlined,
-                                                color: Colors.white70,
-                                                size: 20,
-                                              ),
+                                        : Center(
+                                            child: Icon(
+                                              Icons.category_outlined,
+                                              color: isSelected ? Colors.white : Colors.grey[600],
+                                              size: 20,
                                             ),
                                           ),
                                   ),
