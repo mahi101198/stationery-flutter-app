@@ -8,6 +8,7 @@ import 'package:rps_stationery/utils/constants/sizes.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 import 'package:rps_stationery/utils/theme/design_system.dart';
+import 'package:rps_stationery/utils/theme/component_styles.dart';
 
 class OrderSuccessScreen extends StatefulWidget {
   final String orderId;

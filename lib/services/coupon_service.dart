@@ -179,7 +179,7 @@ class CouponService extends GetxService {
       
       for (final productId in productIds) {
         final productDoc = await _firestore
-            .collection('products')
+            .collection('product_details')
             .doc(productId)
             .get();
         

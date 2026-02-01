@@ -10,6 +10,7 @@ import 'package:rps_stationery/utils/popups/loaders.dart';
 import 'package:rps_stationery/routes/app_pages.dart';
 import 'package:rps_stationery/utils/constants/sizes.dart';
 import 'package:rps_stationery/services/app_settings_service.dart';
+import 'package:rps_stationery/utils/theme/component_styles.dart';
 
 class AddressSelectionScreen extends StatelessWidget {
   const AddressSelectionScreen({super.key});
@@ -24,10 +25,21 @@ class AddressSelectionScreen extends StatelessWidget {
     print('🔍 AddressSelectionScreen: Controller initialized');
 
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Select Delivery Address'),
-        backgroundColor: Colors.transparent,
+        title: const Text(
+          'Select Delivery Address',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
+        leading: IconButton(
+          icon: Icon(Iconsax.arrow_left, color: Theme.of(context).colorScheme.onSurface),
+          onPressed: () => Get.back(),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(TSizes.defaultSpace),
@@ -35,18 +47,26 @@ class AddressSelectionScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            const Text(
+            Text(
               'Choose delivery address',
               style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: TSizes.spaceBtwItems),
 
             // Add New Address Button
-            Card(
-              elevation: 2,
+            Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outline,
+                  width: 1,
+                ),
+              ),
               child: InkWell(
                 onTap: () {
                   print('🔍 AddressSelectionScreen: Add New Address tapped');
@@ -60,12 +80,13 @@ class AddressSelectionScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(TSizes.sm),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(6),
                         ),
                         child: Icon(
                           Iconsax.add,
-                          color: Theme.of(context).colorScheme.primary,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          size: 18,
                         ),
                       ),
                       const SizedBox(width: TSizes.md),
@@ -73,11 +94,12 @@ class AddressSelectionScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Add New Address',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 15,
                                 fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                             Text(
@@ -118,11 +140,12 @@ class AddressSelectionScreen extends StatelessWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Saved Addresses',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: TSizes.sm),

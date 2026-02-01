@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:rps_stationery/data/models/banner_analytics_model.dart';
+import 'package:rps_stationery/data/models/banner_view_analytics_model.dart';
 import 'package:rps_stationery/utils/navigation/url_navigation_service.dart';
 
 /// Service for tracking banner click analytics with location detection
@@ -65,6 +66,54 @@ class BannerAnalyticsService {
       
     } catch (e) {
       dev.log('❌ BannerAnalyticsService: Error tracking banner click: $e');
+      // Don't throw error - analytics should not break the app
+    }
+  }
+
+  /// Track banner view (impression) with analytics
+  static Future<void> trackBannerView({
+    required String bannerId,
+    String? source,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      dev.log('👁️ BannerAnalyticsService: Tracking banner view for banner: $bannerId');
+      
+      // Get user information
+      final user = FirebaseAuth.instance.currentUser;
+      final userId = user?.uid ?? 'anonymous';
+      final userEmail = user?.email;
+
+      // Get location information (cached or fetched)
+      final locationData = await _getLocationData();
+      
+      // Get user agent and other device info
+      final userAgent = await _getUserAgent();
+      
+      // Create view analytics record
+      final viewId = '${bannerId}_${DateTime.now().millisecondsSinceEpoch}_${userId.hashCode}';
+      final viewRecord = BannerViewAnalyticsModel(
+        viewId: viewId,
+        bannerId: bannerId,
+        userId: userId,
+        userEmail: userEmail,
+        viewedAt: DateTime.now(),
+        userAgent: userAgent,
+        ipAddress: locationData['ip'],
+        country: locationData['country'],
+        region: locationData['regionName'],
+        city: locationData['city'],
+        source: source ?? 'home_carousel',
+        metadata: metadata ?? {},
+      );
+
+      // Save to Firestore views subcollection
+      await _saveViewRecord(viewRecord);
+      
+      dev.log('✅ BannerAnalyticsService: Successfully tracked banner view');
+      
+    } catch (e) {
+      dev.log('❌ BannerAnalyticsService: Error tracking banner view: $e');
       // Don't throw error - analytics should not break the app
     }
   }
@@ -139,6 +188,24 @@ class BannerAnalyticsService {
       rethrow;
     }
   }
+
+  /// Save view record to Firestore subcollection under banner document
+  static Future<void> _saveViewRecord(BannerViewAnalyticsModel record) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection(_bannerCollectionName)
+          .doc(record.bannerId)
+          .collection('views') // Separate subcollection for views
+          .doc(record.viewId)
+          .set(record.toFirestore());
+      
+      dev.log('💾 BannerAnalyticsService: Saved view record to subcollection: ${record.viewId}');
+    } catch (e) {
+      dev.log('❌ BannerAnalyticsService: Error saving view record: $e');
+      rethrow;
+    }
+  }
+
 
   // Note: Analytics dashboard methods removed as this is a user app
   // Analytics data is saved to banner subcollections for admin app usage

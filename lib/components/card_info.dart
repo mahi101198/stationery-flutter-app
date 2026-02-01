@@ -59,7 +59,7 @@ class CardInfo extends StatelessWidget {
                               if (isSelected)
                                 CircleAvatar(
                                   radius: 12,
-                                  backgroundColor: Colors.white,
+                                  backgroundColor: Theme.of(context).cardColor,
                                   child: Padding(
                                     padding: const EdgeInsets.all(
                                         defaultPadding / 4),

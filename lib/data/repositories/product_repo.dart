@@ -36,18 +36,17 @@ class ProductRepo extends GetxController {
   /// Fetch all products (legacy method - use with caution)
   Future<List<ProductModel>> fetchAllProducts() async {
     return safeCall(() async {
-      log('🔄 ProductRepo: Starting Firestore query for active products', name: 'ProductRepo');
+      log('🔄 ProductRepo: Starting Firestore query for products', name: 'ProductRepo');
       
       final products =
           await _db
-              .collection('products')
-              .where('isActive', isEqualTo: true)
+              .collection('product_details')
               .get();
               
       log('📊 ProductRepo: Query returned ${products.docs.length} documents', name: 'ProductRepo');
       
       if (products.docs.isEmpty) {
-        log('⚠️ ProductRepo: No active products found in Firestore!', name: 'ProductRepo');
+        log('⚠️ ProductRepo: No products found in Firestore product_details collection!', name: 'ProductRepo');
         return [];
       }
       
@@ -79,13 +78,12 @@ class ProductRepo extends GetxController {
       log('🔄 ProductRepo: Fetching products with pagination (limit: $limit, offset: $offset)', name: 'ProductRepo');
       
       Query query = _db
-          .collection('products')
-          .where('isActive', isEqualTo: true)
+          .collection('product_details')
           .limit(limit);
 
       // Add offset using cursor-based pagination if lastDocumentId is provided
       if (lastDocumentId != null) {
-        final lastDoc = await _db.collection('products').doc(lastDocumentId).get();
+        final lastDoc = await _db.collection('product_details').doc(lastDocumentId).get();
         if (lastDoc.exists) {
           query = query.startAfterDocument(lastDoc);
         }
@@ -137,9 +135,8 @@ class ProductRepo extends GetxController {
       log('🔄 ProductRepo: Fetching products for category: $category', name: 'ProductRepo');
       
       Query query = _db
-          .collection('products')
-          .where('isActive', isEqualTo: true)
-          .where('categoryId', isEqualTo: category)
+          .collection('product_details')
+          .where('category', isEqualTo: category)
           .limit(limit);
 
       if (offset > 0) {
@@ -188,9 +185,8 @@ class ProductRepo extends GetxController {
       log('🔄 ProductRepo: Fetching products for subcategory: $subCategoryId', name: 'ProductRepo');
       
       Query query = _db
-          .collection('products')
-          .where('isActive', isEqualTo: true) 
-          .where('subcategoryId', isEqualTo: subCategoryId)
+          .collection('product_details')
+          .where('sub_category', isEqualTo: subCategoryId)
           .limit(limit);
 
       if (offset > 0) {
@@ -241,10 +237,9 @@ class ProductRepo extends GetxController {
       
       // First try exact prefix match (for performance)
       Query searchQuery = _db
-          .collection('products')
-          .where('isActive', isEqualTo: true)
-          .where('name', isGreaterThanOrEqualTo: query)
-          .where('name', isLessThan: '$query~')
+          .collection('product_details')
+          .where('title', isGreaterThanOrEqualTo: query)
+          .where('title', isLessThan: '$query~')
           .limit(limit);
 
       if (offset > 0) {
@@ -280,8 +275,7 @@ class ProductRepo extends GetxController {
       
       // Get all active products and filter them
       final allProductsQuery = _db
-          .collection('products')
-          .where('isActive', isEqualTo: true)
+          .collection('product_details')
           .limit(1000); // Get more products for filtering
 
       final allProductsSnapshot = await allProductsQuery.get();
@@ -339,13 +333,35 @@ class ProductRepo extends GetxController {
 
   Future<ProductModel> getProductById(String id) async {
     return safeCall(() async {
-      final doc = await _db.collection('products').doc(id).get();
+      final doc = await _db.collection('product_details').doc(id).get();
       if (!doc.exists) {
         throw 'Product not found';
       }
 
       // All membership/quantity flags are handled by ProductCacheService
       return ProductModel.fromFirestore(doc);
+    });
+  }
+
+  /// Get product by SKU ID - searches through all products to find one containing the SKU
+  Future<ProductModel?> getProductBySKUId(String skuId) async {
+    return safeCall(() async {
+      if (skuId.isEmpty) return null;
+
+      final querySnapshot = await _db.collection('product_details').get();
+
+      for (final doc in querySnapshot.docs) {
+        final product = ProductModel.fromFirestore(doc);
+        
+        // Check if this product contains the SKU
+        final hasSKU = product.productSkus.any((sku) => sku.skuId == skuId);
+        
+        if (hasSKU) {
+          return product;
+        }
+      }
+
+      return null;
     });
   }
 
@@ -436,9 +452,8 @@ class ProductRepo extends GetxController {
     return safeCall(() async {
       final productsSnapshot =
           await _db
-              .collection('products')
-              .where('isActive', isEqualTo: true)
-              .where('categoryId', isEqualTo: category)
+              .collection('product_details')
+              .where('category', isEqualTo: category)
               .get();
 
       final subCategories = <String>{};

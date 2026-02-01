@@ -1,179 +1,300 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'product_sku_model.dart';
+import 'content_card_model.dart';
+import 'delivery_info_model.dart';
 
-/// Product status enum for internal use
+/// Product status enum for backward compatibility
 enum ProductStatus { active, inactive, out_of_stock }
 
-/// Unified Product Model - Merges data from products and product_details collections
-/// This model represents complete product information from both collections
-class ProductModel {
-  // Core fields from 'products' collection
-  final String productId;        // "1zaaOVRcw81Yd1XhKmhb"
-  final String name;             // "blooth"
-  final String categoryId;       // "housekeeping"
-  final String subcategoryId;    // "tools"
-  final double mrp;              // 200
-  final double price;            // 150
-  final double discount;         // 25 (percentage)
-  final String image;            // Single image URL from products collection
-  final int stock;               // 222
-  final bool isActive;           // true
-  final DateTime createdAt;      // Oct 1, 2025
-  final DateTime updatedAt;      // Oct 8, 2025
+/// Media Model - Represents product media (images/videos)
+class ProductMediaModel {
+  final String mainImage;
+  final List<String> galleryImages;
 
-  // Extended fields from 'product_details' collection
-  final String? description;     // "osm product need much more qulity"
-  final List<String> images;     // Array of images from product_details
-  final List<String> tags;       // ["stapler", "organiser"]
-  final List<String> miniInfo;   // ["pack of 4"]
-  final String? shippingInfo;    // "Shipped within two days"
-  final String? shippingInfoTitle; // "Shipping Info"
-  final String? returnDescription; // "No returns accepted"
-  final String? returnTitle;     // "Return Policy"
-  final int maxQuantityPerUser;  // Maximum quantity per user per order
-  final List<String> colors;     // Available colors: ["Red", "Blue", "Green"]
+  const ProductMediaModel({
+    required this.mainImage,
+    this.galleryImages = const [],
+  });
+
+  /// Get all images (main + gallery)
+  List<String> get allImages {
+    final images = <String>[];
+    if (mainImage.isNotEmpty) images.add(mainImage);
+    images.addAll(galleryImages);
+    return images;
+  }
+
+  factory ProductMediaModel.fromFirestore(Map<String, dynamic> data) {
+    // Parse main_image - can be either a string URL or an object with 'url' field
+    String mainImageUrl = '';
+    final mainImageData = data['main_image'];
+    
+    if (mainImageData is String) {
+      mainImageUrl = mainImageData;
+    } else if (mainImageData is Map) {
+      mainImageUrl = mainImageData['url'] ?? '';
+    }
+    
+    // Sanitize URL
+    if (mainImageUrl.contains('example.com') || mainImageUrl.contains('placeholder')) {
+      mainImageUrl = '';
+    }
+    
+    return ProductMediaModel(
+      mainImage: mainImageUrl,
+      galleryImages: _parseStringList(data['gallery_images']),
+    );
+  }
+
+  static List<String> _parseStringList(dynamic data) {
+    if (data == null || data is! List) return [];
+    return data.whereType<String>().toList();
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'main_image': mainImage,
+      'gallery_images': galleryImages,
+    };
+  }
+
+  factory ProductMediaModel.empty() {
+    return const ProductMediaModel(mainImage: '', galleryImages: []);
+  }
+}
+
+/// SKU-Based Product Model - Complete product information from product_details collection
+class ProductModel {
+  // Core product information
+  final String productId;
+  final String title;
+  final String? subtitle; // Optional subtitle for product
+  final String description;
+  final String brand;
+  final String category;
+  final String subCategory;
+
+  // Media
+  final ProductMediaModel media;
+
+  // Variant system
+  final Map<String, List<String>> variantAttributes; // e.g., {"color": ["blue", "black"], "pack_size": ["pack1", "pack5"]}
+  final List<ProductSKUModel> productSkus;
+  final String overallAvailability; // "in_stock" | "out_of_stock" | "limited"
+
+  // Dynamic content
+  final List<ContentCardModel> contentCards;
+
+  // Delivery & trust
+  final DeliveryInfoModel deliveryInfo;
+
+  // Rating & Reviews
+  final double averageRating;
+  final int reviewCount;
+
+  // Metadata
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   const ProductModel({
     required this.productId,
-    required this.name,
-    required this.categoryId,
-    required this.subcategoryId,
-    required this.mrp,
-    required this.price,
-    required this.discount,
-    required this.image,
-    required this.stock,
-    required this.isActive,
+    required this.title,
+    this.subtitle,
+    required this.description,
+    required this.brand,
+    required this.category,
+    required this.subCategory,
+    required this.media,
+    required this.variantAttributes,
+    required this.productSkus,
+    required this.overallAvailability,
+    required this.contentCards,
+    required this.deliveryInfo,
+    this.averageRating = 0.0,
+    this.reviewCount = 0,
     required this.createdAt,
     required this.updatedAt,
-    this.description,
-    this.images = const [],
-    this.tags = const [],
-    this.miniInfo = const [],
-    this.shippingInfo,
-    this.shippingInfoTitle,
-    this.returnDescription,
-    this.returnTitle,
-    this.maxQuantityPerUser = 10, // Default to 10 items per user
-    this.colors = const [],
   });
 
   // ==================== GETTERS ====================
 
-  /// Check if product has discount
-  bool get hasDiscount => discount > 0;
-  
-  /// Check if product is available for purchase
-  bool get isAvailable => isActive && stock > 0;
-  
   /// Backward compatibility - some code expects id
   String get id => productId;
 
   /// Backward compatibility - some code expects primaryImage
-  String get primaryImage => image;
+  String get primaryImage => media.mainImage;
 
-  /// Get all images (from both collections)
-  List<String> get allImages {
-    final allImages = <String>[];
-    if (image.isNotEmpty) allImages.add(image); // From products collection
-    allImages.addAll(images); // From product_details collection
-    return allImages;
+  /// Get all images
+  List<String> get allImages => media.allImages;
+
+  /// Get display image (main image or first gallery image)
+  String get displayImage => media.mainImage.isNotEmpty 
+      ? media.mainImage 
+      : (media.galleryImages.isNotEmpty ? media.galleryImages.first : '');
+
+  /// Check if product has any SKUs available
+  bool get isAvailable => overallAvailability != 'out_of_stock' && productSkus.any((sku) => sku.isAvailable);
+
+  /// Check if product has variants
+  bool get hasVariants => variantAttributes.isNotEmpty && variantAttributes.values.any((values) => values.length > 1);
+
+  /// Check if product has only one SKU
+  bool get hasSingleSKU => productSkus.length == 1;
+
+  /// Get the single SKU (if only one exists)
+  ProductSKUModel? get singleSKU => hasSingleSKU ? productSkus.first : null;
+
+  /// Get minimum price across all SKUs
+  double? get minPrice {
+    if (productSkus.isEmpty) return null;
+    return productSkus.map((sku) => sku.price).reduce((a, b) => a < b ? a : b);
   }
 
-  /// Get primary image (prefer from products collection, fallback to product_details)
-  String get displayImage => image.isNotEmpty ? image : (images.isNotEmpty ? images.first : '');
+  /// Get maximum price across all SKUs
+  double? get maxPrice {
+    if (productSkus.isEmpty) return null;
+    return productSkus.map((sku) => sku.price).reduce((a, b) => a > b ? a : b);
+  }
 
-  /// Get status enum (backward compatibility)
-  ProductStatus get status => isActive ? ProductStatus.active : ProductStatus.inactive;
+  /// Get minimum MRP across all SKUs
+  double? get minMRP {
+    if (productSkus.isEmpty) return null;
+    return productSkus.map((sku) => sku.mrp).reduce((a, b) => a < b ? a : b);
+  }
+
+  /// Get maximum MRP across all SKUs
+  double? get maxMRP {
+    if (productSkus.isEmpty) return null;
+    return productSkus.map((sku) => sku.mrp).reduce((a, b) => a > b ? a : b);
+  }
+
+  /// Check if any SKU has discount
+  bool get hasDiscount => productSkus.any((sku) => sku.hasDiscount);
+
+  // ==================== DISPLAY PROPERTIES (Backward Compatibility) ====================
+  
+  /// Backward compatibility - some code expects 'name' instead of 'title'
+  String get name => title;
+
+  /// Display price - returns the minimum price across all SKUs
+  /// This is used for product cards and listings
+  double get price => minPrice ?? 0.0;
+
+  /// Display MRP - returns the minimum MRP across all SKUs
+  /// This is used for showing the original price before discount
+  double get mrp => minMRP ?? 0.0;
+
+  /// Display discount percentage - calculated from price and MRP
+  /// Returns the maximum discount percentage across all SKUs
+  double get discount {
+    if (!hasDiscount || mrp == 0) return 0.0;
+    return ((mrp - price) / mrp) * 100;
+  }
+
+  // ==================== ADDITIONAL BACKWARD COMPATIBILITY ====================
+  
+  /// Total stock - sum of available quantities across all SKUs
+  int get stock {
+    if (productSkus.isEmpty) return 0;
+    return productSkus
+        .where((sku) => sku.isAvailable)
+        .fold(0, (sum, sku) => sum + (sku.availableQuantity ?? 0));
+  }
+
+  /// Primary image - maps to media.mainImage
+  String get image => media.mainImage;
+
+  /// Additional images - maps to media.galleryImages
+  List<String> get images => media.galleryImages;
+
+  /// Category ID - maps to category field
+  String get categoryId => category;
+
+  /// Subcategory ID - maps to subCategory field
+  String get subcategoryId => subCategory;
+
+  /// Tags - derived from category and subcategory for search
+  List<String> get tags {
+    final tagList = <String>[];
+    if (category.isNotEmpty) tagList.add(category);
+    if (subCategory.isNotEmpty) tagList.add(subCategory);
+    if (brand.isNotEmpty) tagList.add(brand);
+    return tagList;
+  }
+
+  /// Colors - derived from variant attributes
+  List<String> get colors {
+    if (variantAttributes.containsKey('color')) {
+      return variantAttributes['color'] ?? [];
+    }
+    return [];
+  }
+
+  /// Is active - derived from availability
+  bool get isActive => overallAvailability != 'out_of_stock' && productSkus.any((sku) => sku.isAvailable);
+
+  /// Maximum quantity per user - from purchase_limits or default to 10
+  int get maxQuantityPerUser {
+    // Try to get from deliveryInfo.purchaseLimits first (if it exists there)
+    // Otherwise use a reasonable default
+    return 10; // Will be updated when we add PurchaseLimitsModel
+  }
 
   // ==================== FACTORY CONSTRUCTORS ====================
 
-  /// Create from Firestore document (products collection only)
+  /// Create from Firestore document (product_details collection)
   factory ProductModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? {};
     
     return ProductModel(
-      productId: data['productId'] ?? doc.id,
-      name: data['name'] ?? '',
-      categoryId: data['categoryId'] ?? '',
-      subcategoryId: data['subcategoryId'] ?? '',
-      mrp: (data['mrp'] ?? 0.0).toDouble(),
-      price: (data['price'] ?? 0.0).toDouble(),
-      discount: (data['discount'] ?? 0.0).toDouble(),
-      image: data['image'] ?? '',
-      stock: (data['stock'] ?? 0).toInt(),
-      isActive: data['isActive'] ?? true,
-      createdAt: _parseTimestamp(data['createdAt']),
-      updatedAt: _parseTimestamp(data['updatedAt']),
-      maxQuantityPerUser: (data['maxQuantityPerUser'] ?? 10).toInt(),
-      // Extended fields will be empty for basic products collection
-      description: null,
-      images: const [],
-      tags: const [],
-      miniInfo: const [],
-      colors: const [],
+      productId: data['product_id'] ?? doc.id,
+      title: data['title'] ?? '',
+      subtitle: data['subtitle'],
+      description: data['description'] ?? '',
+      brand: data['brand'] ?? '',
+      category: data['category'] ?? '',
+      subCategory: data['sub_category'] ?? '',
+      media: data['media'] != null 
+          ? ProductMediaModel.fromFirestore(data['media'] as Map<String, dynamic>)
+          : ProductMediaModel.empty(),
+      variantAttributes: _parseVariantAttributes(data['variant_attributes']),
+      productSkus: _parseProductSKUs(data['product_skus'], data['purchase_limits']),
+      overallAvailability: data['overall_availability'] ?? 'out_of_stock',
+      contentCards: _parseContentCards(data['content_cards']),
+      deliveryInfo: data['delivery_info'] != null
+          ? DeliveryInfoModel.fromFirestore(data['delivery_info'] as Map<String, dynamic>)
+          : DeliveryInfoModel.empty(),
+      averageRating: _parseRating(data),
+      reviewCount: _parseReviewCount(data),
+      createdAt: _parseTimestamp(data['created_at']),
+      updatedAt: _parseTimestamp(data['updated_at']),
     );
   }
 
-  /// Create from Map (for nested data in home sections)
+  /// Create from Map
   factory ProductModel.fromMap(Map<String, dynamic> data) {
     return ProductModel(
-      productId: data['productId'] ?? '',
-      name: data['name'] ?? '',
-      categoryId: data['categoryId'] ?? '',
-      subcategoryId: data['subcategoryId'] ?? '',
-      mrp: (data['mrp'] ?? 0.0).toDouble(),
-      price: (data['price'] ?? 0.0).toDouble(),
-      discount: (data['discount'] ?? 0.0).toDouble(),
-      image: data['image'] ?? '',
-      stock: (data['stock'] ?? 0).toInt(),
-      isActive: data['isActive'] ?? true,
-      createdAt: _parseTimestamp(data['createdAt']),
-      updatedAt: _parseTimestamp(data['updatedAt']),
-      maxQuantityPerUser: (data['maxQuantityPerUser'] ?? 10).toInt(),
-      // Extended fields will be empty for basic data
-      description: null,
-      images: const [],
-      tags: const [],
-      miniInfo: const [],
-      colors: const [],
-    );
-  }
-
-  /// Create complete product by merging data from both collections
-  factory ProductModel.fromMergedData({
-    required Map<String, dynamic> productsData,
-    Map<String, dynamic>? productDetailsData,
-  }) {
-    return ProductModel(
-      // Core fields from products collection
-      productId: productsData['productId'] ?? '',
-      name: productsData['name'] ?? '',
-      categoryId: productsData['categoryId'] ?? '',
-      subcategoryId: productsData['subcategoryId'] ?? '',
-      mrp: (productsData['mrp'] ?? 0.0).toDouble(),
-      price: (productsData['price'] ?? 0.0).toDouble(),
-      discount: (productsData['discount'] ?? 0.0).toDouble(),
-      image: productsData['image'] ?? '',
-      stock: (productsData['stock'] ?? 0).toInt(),
-      isActive: productsData['isActive'] ?? true,
-      createdAt: _parseTimestamp(productsData['createdAt']),
-      updatedAt: _parseTimestamp(productsData['updatedAt']),
-      maxQuantityPerUser: (productsData['maxQuantityPerUser'] ?? 10).toInt(),
-      
-      // Extended fields from product_details collection
-      description: productDetailsData?['description'] as String?,
-      images: _parseStringList(productDetailsData?['images']),
-      tags: _parseStringList(productDetailsData?['tags']),
-      miniInfo: _parseStringList(productDetailsData?['miniInfo']),
-      shippingInfo: productDetailsData?['shippingInfo'] as String?,
-      shippingInfoTitle: productDetailsData?['shippingInfoTitle'] as String?,
-      returnDescription: productDetailsData?['returnDescription'] as String?,
-      returnTitle: productDetailsData?['returnTitle'] as String?,
-      colors: () {
-        final colorsList = _parseStringList(productDetailsData?['colors']);
-        print('🎨 ProductModel: Parsed colors from product_details: $colorsList');
-        return colorsList;
-      }(),
+      productId: data['product_id'] ?? '',
+      title: data['title'] ?? '',
+      subtitle: data['subtitle'],
+      description: data['description'] ?? '',
+      brand: data['brand'] ?? '',
+      category: data['category'] ?? '',
+      subCategory: data['sub_category'] ?? '',
+      media: data['media'] != null 
+          ? ProductMediaModel.fromFirestore(data['media'] as Map<String, dynamic>)
+          : ProductMediaModel.empty(),
+      variantAttributes: _parseVariantAttributes(data['variant_attributes']),
+      productSkus: _parseProductSKUs(data['product_skus'], data['purchase_limits']),
+      overallAvailability: data['overall_availability'] ?? 'out_of_stock',
+      contentCards: _parseContentCards(data['content_cards']),
+      deliveryInfo: data['delivery_info'] != null
+          ? DeliveryInfoModel.fromFirestore(data['delivery_info'] as Map<String, dynamic>)
+          : DeliveryInfoModel.empty(),
+      averageRating: _parseRating(data),
+      reviewCount: _parseReviewCount(data),
+      createdAt: _parseTimestamp(data['created_at']),
+      updatedAt: _parseTimestamp(data['updated_at']),
     );
   }
 
@@ -182,23 +303,20 @@ class ProductModel {
     final now = DateTime.now();
     return ProductModel(
       productId: '',
-      name: 'Unknown Product',
-      categoryId: '',
-      subcategoryId: '',
-      mrp: 0.0,
-      price: 0.0,
-      discount: 0.0,
-      image: '',
-      stock: 0,
-      isActive: false,
+      title: 'Unknown Product',
+      subtitle: null,
+      description: '',
+      brand: '',
+      category: '',
+      subCategory: '',
+      media: ProductMediaModel.empty(),
+      variantAttributes: const {},
+      productSkus: const [],
+      overallAvailability: 'out_of_stock',
+      contentCards: const [],
+      deliveryInfo: DeliveryInfoModel.empty(),
       createdAt: now,
       updatedAt: now,
-      maxQuantityPerUser: 10,
-      description: null,
-      images: const [],
-      tags: const [],
-      miniInfo: const [],
-      colors: const [],
     );
   }
 
@@ -207,82 +325,62 @@ class ProductModel {
   /// Convert to Firestore document
   Map<String, dynamic> toFirestore() {
     return {
-      'productId': productId,
-      'name': name,
-      'categoryId': categoryId,
-      'subcategoryId': subcategoryId,
-      'mrp': mrp,
-      'price': price,
-      'discount': discount,
-      'image': image,
-      'stock': stock,
-      'isActive': isActive,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
-      'maxQuantityPerUser': maxQuantityPerUser,
+      'product_id': productId,
+      'title': title,
+      'description': description,
+      'brand': brand,
+      'category': category,
+      'sub_category': subCategory,
+      'media': media.toFirestore(),
+      'variant_attributes': variantAttributes,
+      'product_skus': productSkus.map((sku) => sku.toFirestore()).toList(),
+      'overall_availability': overallAvailability,
+      'content_cards': contentCards.map((card) => card.toFirestore()).toList(),
+      'delivery_info': deliveryInfo.toFirestore(),
+      'created_at': Timestamp.fromDate(createdAt),
+      'updated_at': Timestamp.fromDate(updatedAt),
     };
   }
 
   /// Convert to Map
-  Map<String, dynamic> toMap() {
-    return {
-      'productId': productId,
-      'name': name,
-      'categoryId': categoryId,
-      'subcategoryId': subcategoryId,
-      'mrp': mrp,
-      'price': price,
-      'discount': discount,
-      'image': image,
-      'stock': stock,
-      'isActive': isActive,
-      'createdAt': createdAt,
-      'updatedAt': updatedAt,
-      'maxQuantityPerUser': maxQuantityPerUser,
-    };
-  }
+  Map<String, dynamic> toMap() => toFirestore();
 
   // ==================== UTILITY METHODS ====================
 
   /// Create copy with optional parameter overrides
   ProductModel copyWith({
     String? productId,
-    String? name,
-    String? categoryId,
-    String? subcategoryId,
-    double? mrp,
-    double? price,
-    double? discount,
-    String? image,
-    int? stock,
-    bool? isActive,
+    String? title,
+    String? subtitle,
+    String? description,
+    String? brand,
+    String? category,
+    String? subCategory,
+    ProductMediaModel? media,
+    Map<String, List<String>>? variantAttributes,
+    List<ProductSKUModel>? productSkus,
+    String? overallAvailability,
+    List<ContentCardModel>? contentCards,
+    DeliveryInfoModel? deliveryInfo,
     DateTime? createdAt,
     DateTime? updatedAt,
-    int? maxQuantityPerUser,
-    String? description,
-    List<String>? images,
-    List<String>? tags,
-    List<String>? miniInfo,
   }) {
     return ProductModel(
       productId: productId ?? this.productId,
-      name: name ?? this.name,
-      categoryId: categoryId ?? this.categoryId,
-      subcategoryId: subcategoryId ?? this.subcategoryId,
-      mrp: mrp ?? this.mrp,
-      price: price ?? this.price,
-      discount: discount ?? this.discount,
-      image: image ?? this.image,
-      stock: stock ?? this.stock,
-      isActive: isActive ?? this.isActive,
+      title: title ?? this.title,
+      subtitle: subtitle ?? this.subtitle,
+      description: description ?? this.description,
+      brand: brand ?? this.brand,
+      category: category ?? this.category,
+      subCategory: subCategory ?? this.subCategory,
+      media: media ?? this.media,
+      variantAttributes: variantAttributes ?? this.variantAttributes,
+      productSkus: productSkus ?? this.productSkus,
+      overallAvailability: overallAvailability ?? this.overallAvailability,
+      contentCards: contentCards ?? this.contentCards,
+      deliveryInfo: deliveryInfo ?? this.deliveryInfo,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      maxQuantityPerUser: maxQuantityPerUser ?? this.maxQuantityPerUser,
-      description: description ?? this.description,
-      images: images ?? this.images,
-      tags: tags ?? this.tags,
-      miniInfo: miniInfo ?? this.miniInfo,
-      colors: this.colors,
     );
   }
 
@@ -294,6 +392,15 @@ class ProductModel {
     
     if (timestamp is Timestamp) {
       return timestamp.toDate();
+    } else if (timestamp is int) {
+      // Handle Unix timestamp in seconds or milliseconds
+      if (timestamp > 10000000000) {
+        // Milliseconds
+        return DateTime.fromMillisecondsSinceEpoch(timestamp);
+      } else {
+        // Seconds
+        return DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
+      }
     } else if (timestamp is String) {
       return DateTime.tryParse(timestamp) ?? DateTime.now();
     }
@@ -301,15 +408,97 @@ class ProductModel {
     return DateTime.now();
   }
 
-  /// Helper method to parse string lists
-  static List<String> _parseStringList(dynamic data) {
-    if (data == null || data is! List) {
-      return [];
+  /// Helper method to parse rating (handles both old and new structure)
+  static double _parseRating(Map<String, dynamic> data) {
+    // Try new structure first: rating.average
+    if (data['rating'] != null && data['rating'] is Map) {
+      final ratingMap = data['rating'] as Map<String, dynamic>;
+      final average = ratingMap['average'];
+      if (average != null) {
+        if (average is double) return average;
+        if (average is int) return average.toDouble();
+        if (average is String) return double.tryParse(average) ?? 0.0;
+      }
+    }
+    
+    // Fall back to old structure: average_rating
+    final oldRating = data['average_rating'];
+    if (oldRating != null) {
+      if (oldRating is double) return oldRating;
+      if (oldRating is int) return oldRating.toDouble();
+      if (oldRating is String) return double.tryParse(oldRating) ?? 0.0;
+    }
+    
+    return 0.0;
+  }
+
+  /// Helper method to parse review count (handles both old and new structure)
+  static int _parseReviewCount(Map<String, dynamic> data) {
+    // Try new structure first: rating.count
+    if (data['rating'] != null && data['rating'] is Map) {
+      final ratingMap = data['rating'] as Map<String, dynamic>;
+      final count = ratingMap['count'];
+      if (count != null) {
+        if (count is int) return count;
+        if (count is double) return count.toInt();
+        if (count is String) return int.tryParse(count) ?? 0;
+      }
+    }
+    
+    // Fall back to old structure: review_count
+    final oldCount = data['review_count'];
+    if (oldCount != null) {
+      if (oldCount is int) return oldCount;
+      if (oldCount is double) return oldCount.toInt();
+      if (oldCount is String) return int.tryParse(oldCount) ?? 0;
+    }
+    
+    return 0;
+  }
+
+  /// Helper method to parse variant attributes
+  static Map<String, List<String>> _parseVariantAttributes(dynamic data) {
+    if (data == null || data is! Map) return {};
+    
+    final Map<String, List<String>> result = {};
+    data.forEach((key, value) {
+      if (value is List) {
+        result[key.toString()] = value.whereType<String>().toList();
+      }
+    });
+    
+    return result;
+  }
+
+  /// Helper method to parse product SKUs
+  static List<ProductSKUModel> _parseProductSKUs(dynamic data, dynamic purchaseLimitsData) {
+    if (data == null || data is! List) return [];
+    
+    // Parse parent product's purchase limits
+    int maxPerOrder = 999;
+    if (purchaseLimitsData is Map<String, dynamic>) {
+      maxPerOrder = (purchaseLimitsData['max_per_order'] as num?)?.toInt() ?? 999;
     }
     
     return data
-        .whereType<String>()
-        .map((item) => item)
+        .whereType<Map<String, dynamic>>()
+        .map((skuData) {
+          // Add purchase_limits to SKU data if not already present
+          if (skuData['purchase_limits'] == null) {
+            skuData['purchase_limits'] = {'max_per_order': maxPerOrder};
+          }
+          return ProductSKUModel.fromFirestore(skuData);
+        })
+        .toList();
+  }
+
+  /// Helper method to parse content cards
+  static List<ContentCardModel> _parseContentCards(dynamic data) {
+    if (data == null || data is! List) return [];
+    
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map((cardData) => ContentCardModel.fromFirestore(cardData))
         .toList();
   }
 
@@ -326,12 +515,5 @@ class ProductModel {
   int get hashCode => productId.hashCode;
 
   @override
-  String toString() => 'ProductModel(productId: $productId, name: $name, mrp: $mrp, price: $price, discount: $discount%)';
+  String toString() => 'ProductModel(productId: $productId, title: $title, skus: ${productSkus.length}, availability: $overallAvailability)';
 }
-
-// ==================== LEGACY COMPATIBILITY ====================
-
-/// Legacy alias for backward compatibility
-/// Use ProductModel instead
-@Deprecated('Use ProductModel instead')
-typedef ProductSummary = ProductModel;

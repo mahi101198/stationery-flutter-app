@@ -1,0 +1,128 @@
+﻿Checking each field type:
+
+product_id:
+  Type: string
+  Value: cleaning-floor-001
+
+description:
+  Type: string
+  Value: Powerful disinfectant floor cleaner that kills 99.9% germs. Leaves your floors sparkling clean with a refreshing citrus fragrance that lasts for hours.
+
+brand:
+  Type: string
+  Value: CleanPro
+
+created_at:
+  Type: number
+  Value: 1769612399
+
+variant_attributes:
+  Type: object
+  Keys: size, fragrance
+  Value: {
+  "size": [
+    "500ml",
+    "1L",
+    "2L"
+  ],
+  "fragrance": [
+    "citrus",
+    "lavender"
+  ]
+}
+
+product_skus:
+  Type: array
+  Length: 6
+  First item type: object
+  First item: {
+  "sku_id": "floor-001-500ml-citrus",
+  "attributes": {
+    "size": "500ml",
+    "fragrance": "citrus"
+  },
+  "mrp": 99,
+  "price": 85,
+  "currency_code": "INR",
+  "available_quantity": 300,
+  "availability": "in_stock"
+}
+
+overall_availability:
+  Type: string
+  Value: in_stock
+
+delivery_info:
+  Type: object
+  Keys: cod_available, return_policy, delivery_estimate_text
+  Value: {
+  "cod_available": true,
+  "return_policy": "7 days return if sealed",
+  "delivery_estimate_text": "Jan 27 ΓÇô Jan 30"
+}
+
+tags:
+  Type: array
+  Length: 4
+  First item type: string
+
+average_rating:
+  Type: number
+  Value: 0
+
+review_count:
+  Type: number
+  Value: 0
+
+is_active:
+  Type: boolean
+  Value: true
+
+content_cards:
+  Type: array
+  Length: 3
+  First item type: object
+  First item: {
+  "card_id": "highlights",
+  "title": "Highlights",
+  "type": "list",
+  "data": [
+    "[\"Kills 99.9% germs\",\"Long-lasting fragrance\",\"Safe for all floor types\",\"No residue\"]"
+  ]
+}
+
+updated_at:
+  Type: number
+  Value: 1769612508591
+
+sub_category:
+  Type: string
+  Value: cleaning supplies
+
+name:
+  Type: string
+  Value: Citrus Fresh - Kills 99.9% Germs
+
+media:
+  Type: object
+  Keys: main_image, gallery_images
+  Value: {
+  "main_image": {
+    "url": "https://cdn.example.com/products/floor-cleaner/main.jpg",
+    "alt_text": "Floor cleaner bottle"
+  },
+  "gallery_images": []
+}
+
+primary_sku_id:
+  Type: string
+  Value: floor-001-500ml-citrus
+
+title:
+  Type: string
+  Value: bbbb
+
+category:
+  Type: string
+  Value: housekeeping
+

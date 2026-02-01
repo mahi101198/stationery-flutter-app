@@ -5,13 +5,14 @@ import 'package:rps_stationery/features/auth/screens/forgot_password/forgot_pass
 import 'package:rps_stationery/features/category/optimized_category_screen.dart';
 import 'package:rps_stationery/features/category/screens/subcategory_products_screen.dart';
 import 'package:rps_stationery/features/category/bindings/streaming_subcategory_products_binding.dart';
+import 'package:rps_stationery/features/home/screens/section_view_all_screen.dart';
 import 'package:rps_stationery/features/notification/notification_screen.dart';
 import 'package:rps_stationery/features/order/screens/order_success_screen.dart';
 import 'package:rps_stationery/features/order/screens/order_list_screen.dart';
 import 'package:rps_stationery/features/order/screens/order_details_screen.dart';
 import 'package:rps_stationery/features/order/screens/order_cancelled_screen.dart';
 import 'package:rps_stationery/features/personalization/screens/referrals_screen.dart';
-import 'package:rps_stationery/features/product/product_details_screen.dart';
+import 'package:rps_stationery/features/product/minimal_product_details_screen.dart';
 import 'package:rps_stationery/features/promotions/promotions_screen.dart';
 import 'package:rps_stationery/features/search/optimized_search_screen.dart';
 import 'package:rps_stationery/features/checkout/screens/address_selection_screen.dart';
@@ -39,7 +40,7 @@ class AppPages {
     ),
     GetPage(
       name: Routes.productDetail,
-      page: () => ProductDetailsScreen(),
+      page: () => const MinimalProductDetailsScreen(),
       binding: ProductDetailBinding(),
     ),
     GetPage(name: Routes.search, page: () => OptimizedSearchScreen()),
@@ -70,6 +71,10 @@ class AppPages {
       name: Routes.subCategoryProducts,
       page: () => const SubCategoryProductsScreen(),
       binding: StreamingSubCategoryProductsBinding(),
+    ),
+    GetPage(
+      name: Routes.sectionViewAll,
+      page: () => const SectionViewAllScreen(),
     ),
     GetPage(
       name: Routes.addressSelection,

@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:rps_stationery/components/Banner/unified_banner.dart';
 import 'package:rps_stationery/components/skleton/unified_skeleton.dart';
 import 'package:rps_stationery/features/home/controllers/banner_controller.dart';
+import 'package:rps_stationery/services/banner_analytics_service.dart';
 
 class BannerCarousel extends StatefulWidget {
   const BannerCarousel({super.key});
@@ -82,6 +83,22 @@ class _BannerCarouselState extends State<BannerCarousel> {
     });
   }
 
+  /// Track banner view when it's displayed
+  void _trackBannerView(int index) {
+    if (controller.banners.isEmpty || index >= controller.banners.length) return;
+    
+    final banner = controller.banners[index];
+    BannerAnalyticsService.trackBannerView(
+      bannerId: banner.bannerId,
+      source: 'home_carousel',
+      metadata: {
+        'carousel_index': index,
+        'total_banners': controller.banners.length,
+        'view_duration_seconds': banner.viewChangeTimeSeconds,
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Obx(
@@ -90,49 +107,51 @@ class _BannerCarouselState extends State<BannerCarousel> {
           : controller.banners.isEmpty
               ? const SizedBox(height: 160) // Empty state with fixed height
               : Container(
-                  margin: const EdgeInsets.all(0), // Removed all margins for maximum image space
+                  margin: const EdgeInsets.all(0), // No margins - handled by parent
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
+                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
+                        color: Colors.black.withValues(alpha: 0.08), // Subtle shadow for minimal look
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                         spreadRadius: 0,
                       ),
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(20),
                     child: AspectRatio(
                       aspectRatio: 2.1, // Increased height for better image utilization
                       child: Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      PageView.builder(
-                          controller: pageController,
-                          itemCount: controller.banners.length,
-                          onPageChanged: (index) {
-                            controller.updatePageIndicator(index);
-                            _startAutoScroll();
-                          },
-                          itemBuilder: (context, index) => UnifiedBanner(
-                            imageUrl: controller.banners[index].image,
-                            onTap: () {},
-                            size: BannerSize.large, // Changed to medium for larger image display
-                            showOverlay: false,
-                            borderRadius: 0,
-                            padding: const EdgeInsets.all(0.0), // Completely removed internal padding for maximum image space
-                            redirectUrl: controller.banners[index].redirectUrl,
-                            bannerId: controller.banners[index].bannerId,
-                            source: 'home_carousel',
-                            metadata: {
-                              'carousel_index': index,
-                              'total_banners': controller.banners.length,
+                        alignment: Alignment.bottomRight,
+                        children: [
+                          PageView.builder(
+                            controller: pageController,
+                            itemCount: controller.banners.length,
+                            onPageChanged: (index) {
+                              controller.updatePageIndicator(index);
+                              _trackBannerView(index); // Track view when banner is shown
+                              _startAutoScroll();
                             },
+                            itemBuilder: (context, index) => UnifiedBanner(
+                              imageUrl: controller.banners[index].image,
+                              onTap: () {},
+                              size: BannerSize.large,
+                              showOverlay: false,
+                              borderRadius: 0,
+                              padding: const EdgeInsets.all(0.0),
+                              redirectUrl: controller.banners[index].redirectUrl,
+                              bannerId: controller.banners[index].bannerId,
+                              source: 'home_carousel',
+                              metadata: {
+                                'carousel_index': index,
+                                'total_banners': controller.banners.length,
+                              },
+                            ),
                           ),
-                        ),
-                    ],
+                        ],
                       ),
                     ),
                   ),
@@ -140,4 +159,3 @@ class _BannerCarouselState extends State<BannerCarousel> {
     );
   }
 }
-

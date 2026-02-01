@@ -51,51 +51,84 @@ class ProductInfo extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Category tag with modern design
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 6,
-              ),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-                    Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Iconsax.category,
-                    size: 14,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 6),
-            Text(
-              product.categoryId.toUpperCase(),
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: Theme.of(context).colorScheme.primary,
-                      letterSpacing: 0.5,
+            // Category and Brand tags
+            Row(
+              children: [
+                // Category tag
+                if (product.category.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                          Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Iconsax.category,
+                          size: 14,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          product.category.toUpperCase(),
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: Theme.of(context).colorScheme.primary,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                
+                if (product.category.isNotEmpty && product.brand.isNotEmpty)
+                  const SizedBox(width: 8),
+                
+                // Brand tag
+                if (product.brand.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      product.brand,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             
             const SizedBox(height: 16),
             
-            // Product name with modern typography
+            // Product title with modern typography
             Text(
-              product.name,
+              product.title,
               maxLines: 2,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
@@ -217,40 +250,6 @@ class ProductInfo extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-            
-            // Stock info if available
-            if (product.isAvailable && product.stock > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Iconsax.box,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        "${product.stock} units available",
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
             ),
           ],
         ),

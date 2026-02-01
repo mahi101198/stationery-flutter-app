@@ -441,7 +441,7 @@ class BannerModel {
     required this.priority,
     required this.validFrom,
     required this.validTill,
-    this.viewChangeTimeSeconds = 0.5,
+    this.viewChangeTimeSeconds = 3.0,
   });
 
   /// Check if banner is currently valid
@@ -476,7 +476,7 @@ class BannerModel {
       priority: (data['priority'] ?? 0).toInt(),
       validFrom: _parseTimestamp(data['validFrom']),
       validTill: _parseTimestamp(data['validTill']),
-      viewChangeTimeSeconds: _parseDuration(data['view_change_time'], 0.5),
+      viewChangeTimeSeconds: _parseDuration(data['view_change_time'], 3.0),
     );
   }
 

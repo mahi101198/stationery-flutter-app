@@ -1,10 +1,14 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:confetti/confetti.dart';
 import 'package:rps_stationery/data/services/product_cache_service.dart';
 import 'package:rps_stationery/features/cart/controllers/cart_controller.dart';
 import 'package:rps_stationery/features/product/controllers/review_controller.dart';
 import 'package:rps_stationery/data/models/product_model.dart';
+import 'package:rps_stationery/data/models/product_sku_model.dart';
 import 'package:rps_stationery/utils/popups/loaders.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProductDetailController extends GetxController {
   static ProductDetailController get instance => Get.find();
@@ -12,17 +16,21 @@ class ProductDetailController extends GetxController {
   var isLoading = true.obs;
   var isCartUpdating = false.obs;
   var isRefreshing = false.obs;
-
   var isInWishlist = false.obs;
 
   var quantity = 1.obs;
   var cartQuantity = 0.obs;
-  var selectedColor = ''.obs;
+  var hasItemsInCart = false.obs;  // Track if ANY items exist in cart
+
+  // SKU-based state management
+  Rxn<ProductSKUModel> selectedSKU = Rxn<ProductSKUModel>();
+  RxMap<String, String> selectedAttributes = <String, String>{}.obs;
 
   Rxn<ProductModel> product = Rxn<ProductModel>();
   late ConfettiController confettiController;
 
   // Get reference to services
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   ProductCacheService get _cacheService => ProductCacheService.instance;
   CartController get _cartController {
     try {
@@ -64,7 +72,6 @@ class ProductDetailController extends GetxController {
         title: "Oh snap!",
         message: "Seems like the product ID got messed up.",
       );
-
       return;
     } else {
       print('🔍 ProductDetailController: Starting to fetch product with ID: $extractedId');
@@ -73,66 +80,135 @@ class ProductDetailController extends GetxController {
 
     // Listen to cart changes to update product's cart quantity
     ever(_cartController.cartItems, (cartItems) {
-      if (product.value != null) {
+      // Update hasItemsInCart - TRUE if ANY items in cart
+      hasItemsInCart.value = cartItems.isNotEmpty;
+      
+      // Add null safety check before accessing values
+      if (product.value != null && selectedSKU.value != null) {
         final cartItem = cartItems.firstWhereOrNull(
-          (item) => item.productId == product.value!.productId,
+          (item) => item.productId == selectedSKU.value!.skuId,
         );
-        if (cartItem != null) {
-          quantity.value = cartItem.quantity;
-          cartQuantity.value = cartItem.quantity;
-        } else {
-          cartQuantity.value = 0;
-        }
+        
+        // Schedule update to avoid setState during build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (cartItem != null) {
+            quantity.value = cartItem.quantity;
+            cartQuantity.value = cartItem.quantity;
+          } else {
+            cartQuantity.value = 0;
+          }
+        });
       }
     });
 
     // Listen to wishlist changes to update product's wishlist status
     ever(_cacheService.wishlistIds, (wishlistIds) {
+      // Add null safety check before accessing value
       if (product.value != null) {
         isInWishlist.value = wishlistIds.contains(product.value!.productId);
       }
     });
   }
 
+  /// Fetch product from product_details collection only
   Future<void> fetchProduct(String id) async {
     try {
       isLoading.value = true;
-      print('🔍 ProductDetailController: Fetching product details for: $id');
+      print('🔍 ProductDetailController: Fetching product details from product_details collection for: $id');
 
-      // Fetch complete product details from both collections
-      final fetchedProduct = await _cacheService.getCompleteProductDetails(id);
+      // Fetch from product_details collection only
+      final productDoc = await _firestore
+          .collection('product_details')
+          .doc(id)
+          .get();
 
-      // Update the product
+      if (!productDoc.exists) {
+        print('❌ ProductDetailController: Product not found in product_details collection');
+        product.value = null;
+        return;
+      }
+
+      // Parse product from product_details
+      final fetchedProduct = ProductModel.fromFirestore(productDoc);
       product.value = fetchedProduct;
       print('✅ ProductDetailController: Product details loaded successfully');
+      print('   Title: ${fetchedProduct.title}');
+      print('   SKUs: ${fetchedProduct.productSkus.length}');
+      print('   Variants: ${fetchedProduct.variantAttributes.keys.join(", ")}');
 
-      // Update the quantity and wishlist status from cache service
-      if (fetchedProduct != null) {
-        // Get cart status from new cart controller
-        final cartItem = _cartController.getCartItemByProductId(fetchedProduct.productId);
-        if (cartItem != null) {
-          quantity.value = cartItem.quantity;
-          cartQuantity.value = cartItem.quantity;
-        } else {
-          cartQuantity.value = 0;
-        }
-        isInWishlist.value = _cacheService.wishlistIds.contains(fetchedProduct.productId);
-        
-        // Load reviews for this product
-        reviewController.loadProductReviews(fetchedProduct.productId);
-        
-        // Set default selected color if colors available
-        if (fetchedProduct.colors.isNotEmpty) {
-          selectedColor.value = fetchedProduct.colors.first;
-          print('🎨 Colors found: ${fetchedProduct.colors}');
-        } else {
-          print('⚠️ No colors found in product');
-        }
-      }
+      // Initialize SKU selection
+      _initializeSKUSelection();
+
+      // Update wishlist status
+      isInWishlist.value = _cacheService.wishlistIds.contains(fetchedProduct.productId);
+      
+      // Load reviews for this product
+      reviewController.loadProductReviews(fetchedProduct.productId);
+
     } catch (e) {
+      print('❌ ProductDetailController: Error fetching product: $e');
       TLoaders.errorSnackBar(title: "Oh snap!", message: e.toString());
+      product.value = null;
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  /// Initialize SKU selection based on product variants
+  void _initializeSKUSelection() {
+    if (product.value == null) return;
+
+    // If only one SKU, auto-select it
+    if (product.value!.hasSingleSKU) {
+      selectedSKU.value = product.value!.singleSKU;
+      selectedAttributes.value = selectedSKU.value!.attributes;
+      print('🎯 Auto-selected single SKU: ${selectedSKU.value!.skuId}');
+      return;
+    }
+
+    // If multiple SKUs, select first available one by default
+    final firstAvailableSKU = product.value!.productSkus.firstWhereOrNull(
+      (sku) => sku.isAvailable,
+    );
+
+    if (firstAvailableSKU != null) {
+      selectedSKU.value = firstAvailableSKU;
+      selectedAttributes.value = Map<String, String>.from(firstAvailableSKU.attributes);
+      print('🎯 Auto-selected first available SKU: ${selectedSKU.value!.skuId}');
+    } else {
+      // No available SKU, just select the first one to show pricing
+      if (product.value!.productSkus.isNotEmpty) {
+        selectedSKU.value = product.value!.productSkus.first;
+        selectedAttributes.value = Map<String, String>.from(product.value!.productSkus.first.attributes);
+        print('⚠️ No available SKUs, selected first SKU for display: ${selectedSKU.value!.skuId}');
+      }
+    }
+  }
+
+  /// Find SKU by selected attributes
+  ProductSKUModel? findSKUByAttributes(Map<String, String> attributes) {
+    if (product.value == null) return null;
+
+    return product.value!.productSkus.firstWhereOrNull(
+      (sku) => mapEquals(sku.attributes, attributes),
+    );
+  }
+
+  /// Handle attribute selection (e.g., color, size, pack_size)
+  void onAttributeSelected(String attributeName, String value) {
+    selectedAttributes[attributeName] = value;
+    
+    // Try to find matching SKU
+    final matchingSKU = findSKUByAttributes(selectedAttributes);
+    
+    if (matchingSKU != null) {
+      selectedSKU.value = matchingSKU;
+      print('✅ SKU found for selection: ${matchingSKU.skuId}');
+      print('   Price: ₹${matchingSKU.price}, MRP: ₹${matchingSKU.mrp}');
+      print('   Availability: ${matchingSKU.availability}');
+    } else {
+      selectedSKU.value = null;
+      print('⚠️ No SKU found for attributes: $selectedAttributes');
     }
   }
 
@@ -143,10 +219,10 @@ class ProductDetailController extends GetxController {
   }
 
   void updateCartQuantity() {
-    if (product.value == null) return;
+    if (selectedSKU.value == null) return;
     
     final cartItem = _cartController.cartItems.firstWhereOrNull(
-      (item) => item.productId == product.value!.productId,
+      (item) => item.productId == selectedSKU.value!.skuId,
     );
     
     cartQuantity.value = cartItem?.quantity ?? 0;
@@ -160,16 +236,10 @@ class ProductDetailController extends GetxController {
   }
 
   int _getMaxAllowedQuantity() {
-    if (product.value == null) return 0;
+    if (selectedSKU.value == null) return 0;
     
-    final stockLimit = product.value!.stock;
-    final userLimit = product.value!.maxQuantityPerUser;
-    
-    if (userLimit != null && userLimit > 0) {
-      return stockLimit < userLimit ? stockLimit : userLimit;
-    }
-    
-    return stockLimit;
+    // Use SKU's max_per_order limit from purchase_limits
+    return selectedSKU.value!.maxPerOrder;
   }
 
   void incrementQuantity() {
@@ -177,19 +247,10 @@ class ProductDetailController extends GetxController {
     if (quantity.value < maxAllowed) {
       quantity.value++;
     } else {
-      // Show appropriate message based on the limiting factor
-      if (product.value?.maxQuantityPerUser != null && 
-          quantity.value >= product.value!.maxQuantityPerUser!) {
-        TLoaders.warningSnackBar(
-          title: "Quantity Limit",
-          message: "Maximum ${product.value!.maxQuantityPerUser} items allowed per user.",
-        );
-      } else if (quantity.value >= maxQuantity) {
-        TLoaders.warningSnackBar(
-          title: "Stock Limited",
-          message: "Only $maxQuantity items available in stock.",
-        );
-      }
+      TLoaders.warningSnackBar(
+        title: "Purchase Limit Reached",
+        message: "Maximum $maxAllowed units per order for this product.",
+      );
     }
   }
 
@@ -206,15 +267,21 @@ class ProductDetailController extends GetxController {
       isRefreshing.value = true;
       print('🔄 ProductDetailController: Refreshing product details for: ${product.value!.productId}');
 
-      // Force refresh from remote to get latest complete product data
-      final fetchedProduct = await _cacheService.getCompleteProductDetails(
-        product.value!.productId,
-      );
+      // Fetch from product_details collection
+      final productDoc = await _firestore
+          .collection('product_details')
+          .doc(product.value!.productId)
+          .get();
 
-      product.value = fetchedProduct;
-      print('✅ ProductDetailController: Product details refreshed successfully');
-      // Don't update quantity or wishlist when refreshing product
-      // This is only for stock or isActive changes in database
+      if (productDoc.exists) {
+        final fetchedProduct = ProductModel.fromFirestore(productDoc);
+        product.value = fetchedProduct;
+        
+        // Re-initialize SKU selection with fresh data
+        _initializeSKUSelection();
+        
+        print('✅ ProductDetailController: Product details refreshed successfully');
+      }
     } catch (e) {
       print('❌ ProductDetailController: Error refreshing product: $e');
       TLoaders.errorSnackBar(
@@ -227,85 +294,128 @@ class ProductDetailController extends GetxController {
   }
 
   Future<void> addToCart() async {
-    if (product.value == null) return;
+    print('🛒 ════════════════════════════════════════════════════════');
+    print('🛒 ADD TO CART - START');
+    print('🛒 ════════════════════════════════════════════════════════');
+    
+    if (product.value == null) {
+      print('❌ Product is null, returning');
+      return;
+    }
+
+    print('✅ Product: ${product.value!.title}');
+    print('✅ Product ID: ${product.value!.productId}');
+
+    // Check if SKU is selected
+    if (selectedSKU.value == null) {
+      print('❌ No SKU selected');
+      TLoaders.errorSnackBar(
+        title: "Selection Required",
+        message: "Please select all product options before adding to cart.",
+      );
+      return;
+    }
+
+    print('✅ Selected SKU: ${selectedSKU.value!.skuId}');
+    print('✅ Quantity: ${quantity.value}');
 
     isCartUpdating.value = true;
+    print('🔄 Cart updating flag set to TRUE');
 
     try {
+      print('🔄 Refreshing product data...');
       // Refresh product data from remote before adding to cart
       await refreshProduct();
+      print('✅ Product data refreshed');
 
-      if (product.value == null) {
+      if (selectedSKU.value == null) {
+        print('❌ SKU became null after refresh');
         TLoaders.errorSnackBar(
           title: "Product Error",
-          message: "Product information could not be loaded.",
+          message: "Selected product variant is no longer available.",
         );
         return;
       }
 
-      // Check if product is available
-      if (!product.value!.isAvailable) {
+      // Check if SKU is available
+      if (!selectedSKU.value!.isAvailable) {
+        print('❌ SKU not available');
         TLoaders.errorSnackBar(
           title: "Product Unavailable",
-          message: "This product is currently unavailable.",
+          message: "This product variant is currently unavailable.",
         );
         return;
       }
 
-      // Check if product is in stock
-      if (product.value!.stock <= 0) {
+      print('✅ SKU is available');
+
+      // Check if SKU is in stock
+      if (selectedSKU.value!.isOutOfStock) {
+        print('❌ SKU out of stock');
         TLoaders.errorSnackBar(
           title: "Out of Stock",
-          message: "This product is currently out of stock.",
+          message: "This product variant is currently out of stock.",
         );
         return;
       }
 
-      // Validate quantity against available stock and user limits
+      print('✅ SKU in stock: ${selectedSKU.value!.availableQuantity}');
+
+      // Validate quantity against available stock
       final maxAllowed = _getMaxAllowedQuantity();
+      print('📊 Max allowed quantity: $maxAllowed');
+      
       if (quantity.value > maxAllowed) {
+        print('⚠️ Quantity exceeds max, adjusting to $maxAllowed');
         quantity.value = maxAllowed;
-        
-        // Show appropriate message based on the limiting factor
-        if (product.value!.maxQuantityPerUser != null && 
-            maxAllowed == product.value!.maxQuantityPerUser) {
-          TLoaders.warningSnackBar(
-            title: "Quantity Limit",
-            message: "Maximum ${product.value!.maxQuantityPerUser} items allowed per user. Quantity adjusted.",
-          );
-        } else {
-          TLoaders.warningSnackBar(
-            title: "Stock Limited",
-            message: "Only $maxAllowed items available. Quantity adjusted.",
-          );
-        }
+        TLoaders.warningSnackBar(
+          title: "Stock Limited",
+          message: "Only $maxAllowed items available. Quantity adjusted.",
+        );
       }
 
       final isUpdate = cartQuantity.value > 0 && cartQuantity.value != quantity.value;
+      print('📊 Is update: $isUpdate (cartQuantity: ${cartQuantity.value})');
 
       if (isUpdate) {
+        print('🔄 Updating existing cart item...');
         // Update existing cart item quantity
-        await _cartController.updateCartItemQuantity(product.value!.productId, quantity.value);
+        await _cartController.updateCartItemQuantity(selectedSKU.value!.skuId, quantity.value);
+        print('✅ Cart item updated');
       } else {
-        // Add new item to cart with selected color
+        print('➕ Adding new item to cart...');
+        print('   SKU ID: ${selectedSKU.value!.skuId}');
+        print('   Quantity: ${quantity.value}');
         await _cartController.addToCart(
-          product.value!.productId, 
+          selectedSKU.value!.skuId, 
           quantity.value,
-          selectedColor: selectedColor.value.isNotEmpty ? selectedColor.value : null,
+          productContext: product.value,
         );
+        print('✅ Item added to cart');
       }
 
       // Update cart quantity locally
       cartQuantity.value = quantity.value;
+      print('✅ Cart quantity updated locally: ${cartQuantity.value}');
 
       // Play confetti animation
       confettiController.play();
+      print('🎉 Confetti animation triggered');
 
-      // Removed toast notification for better UX - cart addition is indicated by UI changes
+      print('✅ ════════════════════════════════════════════════════════');
+      print('✅ ADD TO CART - SUCCESS');
+      print('✅ ════════════════════════════════════════════════════════');
+
     } catch (e) {
+      print('❌ ════════════════════════════════════════════════════════');
+      print('❌ ADD TO CART - ERROR');
+      print('❌ Error: $e');
+      print('❌ Error type: ${e.runtimeType}');
+      print('❌ ════════════════════════════════════════════════════════');
       TLoaders.errorSnackBar(title: "Oh snap!", message: e.toString());
     } finally {
       isCartUpdating.value = false;
+      print('🔄 Cart updating flag set to FALSE');
     }
   }
 
@@ -320,11 +430,85 @@ class ProductDetailController extends GetxController {
     }
   }
 
+  /// Buy Now - Add to cart and navigate to checkout
+  Future<void> buyNow() async {
+    if (product.value == null) return;
+
+    // Check if SKU is selected
+    if (selectedSKU.value == null) {
+      TLoaders.errorSnackBar(
+        title: "Selection Required",
+        message: "Please select all product options before proceeding.",
+      );
+      return;
+    }
+
+    isCartUpdating.value = true;
+
+    try {
+      // Refresh product data from remote before adding to cart
+      await refreshProduct();
+
+      if (selectedSKU.value == null) {
+        TLoaders.errorSnackBar(
+          title: "Product Error",
+          message: "Selected product variant is no longer available.",
+        );
+        return;
+      }
+
+      // Check if SKU is available
+      if (!selectedSKU.value!.isAvailable) {
+        TLoaders.errorSnackBar(
+          title: "Product Unavailable",
+          message: "This product variant is currently unavailable.",
+        );
+        return;
+      }
+
+      // Check if SKU is in stock
+      if (selectedSKU.value!.isOutOfStock) {
+        TLoaders.errorSnackBar(
+          title: "Out of Stock",
+          message: "This product variant is currently out of stock.",
+        );
+        return;
+      }
+
+      // Validate quantity against available stock
+      final maxAllowed = _getMaxAllowedQuantity();
+      if (quantity.value > maxAllowed) {
+        quantity.value = maxAllowed;
+        TLoaders.warningSnackBar(
+          title: "Stock Limited",
+          message: "Only $maxAllowed items available. Quantity adjusted.",
+        );
+      }
+
+      // Add to cart
+      await _cartController.addToCart(
+        selectedSKU.value!.skuId,
+        quantity.value,
+      );
+
+      // Update cart quantity locally
+      cartQuantity.value = quantity.value;
+
+      // Navigate to cart via bottom navigation
+      Get.offAllNamed('/bottom-nav', arguments: 'cart');
+
+    } catch (e) {
+      TLoaders.errorSnackBar(title: "Oh snap!", message: e.toString());
+    } finally {
+      isCartUpdating.value = false;
+    }
+  }
+
   // Helper methods for product state
   bool get canAddToCart {
     return product.value != null &&
-        product.value!.isAvailable &&
-        product.value!.stock > 0;
+        selectedSKU.value != null &&
+        selectedSKU.value!.isAvailable;
   }
 
   int get maxQuantity {
@@ -332,30 +516,32 @@ class ProductDetailController extends GetxController {
   }
 
   bool get isOutOfStock {
-    return product.value?.stock == 0;
+    return selectedSKU.value?.isOutOfStock ?? true;
   }
 
   bool get isInactive {
-    return product.value?.isAvailable == false;
+    return product.value?.overallAvailability == 'out_of_stock';
   }
 
-  bool get hasQuantityLimit {
-    return product.value?.maxQuantityPerUser != null && 
-           product.value!.maxQuantityPerUser! > 0;
+  String? get availabilityMessage {
+    if (selectedSKU.value == null && selectedAttributes.isNotEmpty) {
+      return "This combination is not available";
+    }
+    
+    if (selectedSKU.value?.hasLimitedStock ?? false) {
+      return "Limited stock available";
+    }
+    
+    return null;
   }
 
-  String get quantityLimitMessage {
-    if (!hasQuantityLimit) return '';
-    return 'Max ${product.value!.maxQuantityPerUser} per user';
-  }
+  // SKU-based pricing getters
+  double? get currentPrice => selectedSKU.value?.price;
+  double? get currentMRP => selectedSKU.value?.mrp;
+  bool get hasDiscount => (currentMRP ?? 0) > (currentPrice ?? 0);
+  double get discountPercentage => selectedSKU.value?.discountPercentage ?? 0.0;
 
-  // Color selection method
-  void selectColor(String color) {
-    selectedColor.value = color;
-    print('🎨 ProductDetailController: Color selected: $color');
-  }
-
-  bool get hasColors {
-    return product.value != null && product.value!.colors.isNotEmpty;
-  }
+  // Variant helpers
+  bool get hasVariants => product.value?.hasVariants ?? false;
+  bool get hasSingleSKU => product.value?.hasSingleSKU ?? false;
 }

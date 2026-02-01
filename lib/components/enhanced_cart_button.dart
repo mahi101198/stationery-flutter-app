@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:rps_stationery/routes/app_pages.dart';
 import 'package:rps_stationery/data/models/product_model.dart';
 import 'package:rps_stationery/features/cart/controllers/cart_controller.dart';
+import 'package:rps_stationery/features/product/controllers/product_detail_controller.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:rps_stationery/utils/popups/loaders.dart';
 import '../constants.dart';
@@ -16,6 +17,7 @@ class EnhancedCartButton extends StatefulWidget {
     this.cartQuantity,
     this.isCartUpdating = false,
     this.selectedColor,
+    this.hasItemsInCart = false,
   });
 
   final ProductModel product;
@@ -23,6 +25,7 @@ class EnhancedCartButton extends StatefulWidget {
   final int? cartQuantity;
   final bool isCartUpdating;
   final String? selectedColor;
+  final bool hasItemsInCart;  // TRUE if ANY items exist in cart
 
   @override
   State<EnhancedCartButton> createState() => _EnhancedCartButtonState();
@@ -56,6 +59,8 @@ class _EnhancedCartButtonState extends State<EnhancedCartButton>
   Widget build(BuildContext context) {
     final totalPrice = widget.product.price * widget.quantity;
     final isInCart = (widget.cartQuantity ?? 0) > 0;
+    // Show "Go to Cart" if this product is in cart OR if ANY items exist in cart
+    final shouldShowGoToCart = isInCart || widget.hasItemsInCart;
 
     return SafeArea(
       child: Container(
@@ -100,7 +105,14 @@ class _EnhancedCartButtonState extends State<EnhancedCartButton>
                       ),
                       child: OutlinedButton(
                         onPressed: widget.isCartUpdating ? null : () async {
-                          if (isInCart) {
+                          // If ANY items in cart and this product is NOT in cart, go to cart
+                          if (shouldShowGoToCart && !isInCart) {
+                            Get.offNamedUntil(
+                              Routes.bottomNav,
+                              arguments: 'cart',
+                              (route) => route.settings.name == Routes.bottomNav,
+                            );
+                          } else if (isInCart) {
                             if (widget.cartQuantity != widget.quantity) {
                               // Update quantity in cart
                               final cartController = CartController.instance;
@@ -159,21 +171,21 @@ class _EnhancedCartButtonState extends State<EnhancedCartButton>
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
-                                    isInCart 
-                                        ? (widget.cartQuantity != widget.quantity 
+                                    shouldShowGoToCart
+                                        ? Iconsax.shopping_cart
+                                        : (isInCart && widget.cartQuantity != widget.quantity 
                                             ? Iconsax.refresh 
-                                            : Iconsax.shopping_cart)
-                                        : Iconsax.shopping_bag,
+                                            : Iconsax.shopping_bag),
                                     size: 18,
                                   ),
                                   const SizedBox(width: 6),
                                   Flexible(
                                     child: Text(
-                                      isInCart 
-                                          ? (widget.cartQuantity != widget.quantity 
+                                      shouldShowGoToCart
+                                          ? 'Go to Cart'
+                                          : (isInCart && widget.cartQuantity != widget.quantity 
                                               ? 'Update Cart' 
-                                              : 'Go to Cart')
-                                          : 'Add to Cart',
+                                              : 'Add to Cart'),
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14,
@@ -287,11 +299,33 @@ class _EnhancedCartButtonState extends State<EnhancedCartButton>
         return;
       }
 
-      // Check if product has colors and user hasn't selected one
-      if (widget.product.colors.isNotEmpty && widget.selectedColor == null) {
+      // Get the selected SKU from ProductDetailController
+      final controller = Get.find<ProductDetailController>();
+      final selectedSKU = controller.selectedSKU.value;
+
+      // Validate SKU selection
+      if (selectedSKU == null) {
         TLoaders.errorSnackBar(
-          title: 'Color Required',
-          message: 'Please select a color option before proceeding',
+          title: 'Selection Required',
+          message: 'Please select all product options before proceeding',
+        );
+        return;
+      }
+
+      // Validate SKU availability
+      if (!selectedSKU.isAvailable) {
+        TLoaders.errorSnackBar(
+          title: 'Product Unavailable',
+          message: 'This product variant is currently unavailable',
+        );
+        return;
+      }
+
+      // Validate SKU stock
+      if (selectedSKU.isOutOfStock) {
+        TLoaders.errorSnackBar(
+          title: 'Out of Stock',
+          message: 'This product variant is currently out of stock',
         );
         return;
       }
@@ -301,14 +335,13 @@ class _EnhancedCartButtonState extends State<EnhancedCartButton>
         Routes.addressSelection,
         arguments: {
           'isBuyNow': true,
-          'product': widget.product,
+          'productId': selectedSKU.skuId,  // Pass SKU ID as productId for compatibility
+          'skuId': selectedSKU.skuId,      // Also pass as skuId for clarity
           'quantity': widget.quantity,
-          'productId': widget.product.productId,
-          'name': widget.product.name,
-          'price': widget.product.price,
-          'productImage': widget.product.image,
-          'discountPrice': widget.product.price,
-          if (widget.selectedColor != null) 'selectedColor': widget.selectedColor,
+          'name': widget.product.title,
+          'price': selectedSKU.price,
+          'productImage': widget.product.media.mainImage,
+          'discountPrice': selectedSKU.mrp,
         },
       );
     } catch (e) {

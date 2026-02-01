@@ -4,15 +4,20 @@ import '../../../constants.dart';
 import '../skelton.dart';
 
 class ProductCardSkelton extends StatelessWidget {
+  final double? width;
+  final double height;
+
   const ProductCardSkelton({
     super.key,
+    this.width,
+    this.height = 240,
   });
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
-      height: 188,
-      width: 140,
+    return SizedBox(
+      height: height,
+      width: width ?? 140,
       child: Padding(
         padding: EdgeInsets.all(defaultPadding / 2),
         child: Column(

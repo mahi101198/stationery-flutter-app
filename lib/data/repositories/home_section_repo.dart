@@ -1,276 +1,370 @@
+import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
-import 'package:rps_stationery/data/models/product_model.dart';
-import 'package:rps_stationery/data/services/product_cache_service.dart';
-import 'package:rps_stationery/data/services/product_service.dart';
+import 'package:rps_stationery/data/models/home_section_model.dart';
+import 'package:rps_stationery/data/models/home_section_item_model.dart';
 
-/// Helper class to store section product metadata
-class _SectionProductRef {
-  final String productId;
-  final int rank;
-  final double? priceOverride;
-
-  const _SectionProductRef({
-    required this.productId,
-    required this.rank,
-    this.priceOverride,
-  });
-}
-
+/// Home Section Repository - Handles fetching home sections and items
+/// New schema: home_sections/{section_id}/items/{sku_id}
 class HomeSectionRepo extends GetxController {
   static HomeSectionRepo get instance => Get.find();
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  /// Fetch home sections for a specific category
-  Future<List<HomeSectionData>> fetchHomeSectionsForCategory(String categoryId) async {
+  /// Fetch all active sections sorted by rank
+  /// Only returns sections that are currently live (active status + within time range)
+  Future<List<HomeSectionModel>> fetchActiveSections() async {
     try {
-      print('🏠 HomeSectionRepo: Fetching home sections for category: $categoryId');
-      
-      final docRef = _db.collection('home_sections').doc(categoryId);
-      final docSnapshot = await docRef.get();
-      
-      if (!docSnapshot.exists) {
-        print('⚠️ HomeSectionRepo: No home sections found for category: $categoryId');
-        return [];
-      }
-      
-      final data = docSnapshot.data()!;
-      print('📊 HomeSectionRepo: Retrieved home section document for $categoryId');
-      
-      List<HomeSectionData> sections = [];
-      
-      // Get sections metadata
-      final sectionsList = data['sections'] as List<dynamic>? ?? [];
-      print('📋 HomeSectionRepo: Found ${sectionsList.length} section types');
-      
-      for (var sectionData in sectionsList) {
-        final sectionId = sectionData['sectionId'] as String;
-        final sectionType = sectionData['type'] as String;
-        final title = sectionData['title'] as String;
-        
-        print('🔍 HomeSectionRepo: Processing section: $sectionId ($sectionType)');
-        
-        // Fetch products for this section from subcollection
-        final products = await _fetchSectionProducts(categoryId, sectionId);
-        
-        sections.add(HomeSectionData(
-          sectionId: sectionId,
-          title: title,
-          type: sectionType,
-          products: products,
-          categoryId: categoryId,
-        ));
-        
-        print('✅ HomeSectionRepo: Added section $sectionId with ${products.length} products');
-      }
-      
-      print('🎉 HomeSectionRepo: Successfully loaded ${sections.length} sections for $categoryId');
-      return sections;
-      
-    } catch (e, stackTrace) {
-      print('❌ HomeSectionRepo: Error fetching home sections for $categoryId: $e');
-      print('❌ HomeSectionRepo: Stack trace: $stackTrace');
-      return [];
-    }
-  }
-
-  /// Resolve products using cache-first, Firestore-fallback strategy
-  Future<List<ProductModel>> _resolveProducts(List<_SectionProductRef> productRefs) async {
-    if (productRefs.isEmpty) return [];
-
-    final productIds = productRefs.map((ref) => ref.productId).toList();
-    print('🔍 HomeSectionRepo: Resolving ${productIds.length} products with cache-first strategy');
-
-    List<ProductModel> resolvedProducts = [];
-
-    try {
-      // Try ProductCacheService first (cache-first approach)
-      if (Get.isRegistered<ProductCacheService>()) {
-        print('📱 HomeSectionRepo: Attempting cache-first resolution via ProductCacheService');
-        try {
-          resolvedProducts = await ProductCacheService.instance.getProductsByIds(productIds);
-          print('✅ HomeSectionRepo: Cache resolved ${resolvedProducts.length}/${productIds.length} products');
-        } catch (e) {
-          print('⚠️ HomeSectionRepo: ProductCacheService failed: $e');
-        }
-      }
-
-      // If cache didn't resolve all products, try ProductService (batched Firestore)
-      if (resolvedProducts.length < productIds.length) {
-        final resolvedIds = resolvedProducts.map((p) => p.productId).toSet();
-        final missingIds = productIds.where((id) => !resolvedIds.contains(id)).toList();
-        
-        if (missingIds.isNotEmpty) {
-          print('🌐 HomeSectionRepo: Fetching ${missingIds.length} missing products via ProductService');
-          try {
-            final additionalProducts = await ProductService.instance.getProductsByIds(missingIds);
-            resolvedProducts.addAll(additionalProducts);
-            print('✅ HomeSectionRepo: ProductService resolved ${additionalProducts.length} additional products');
-          } catch (e) {
-            print('⚠️ HomeSectionRepo: ProductService failed: $e');
-          }
-        }
-      }
-
-      // Create a map for quick lookup and preserve order
-      final productMap = <String, ProductModel>{};
-      for (final product in resolvedProducts) {
-        productMap[product.productId] = product;
-      }
-
-      // Build final list in original order with price overrides applied
-      final List<ProductModel> finalProducts = [];
-      for (final ref in productRefs) {
-        final product = productMap[ref.productId];
-        if (product != null) {
-          // Apply price override if present
-          final finalProduct = ref.priceOverride != null
-              ? product.copyWith(price: ref.priceOverride!)
-              : product;
-          
-          finalProducts.add(finalProduct);
-          
-          if (ref.priceOverride != null) {
-            print('💰 HomeSectionRepo: Applied price override ${ref.priceOverride} for ${product.name}');
-          }
-        } else {
-          print('⚠️ HomeSectionRepo: Product not found: ${ref.productId}');
-        }
-      }
-
-      print('🎉 HomeSectionRepo: Successfully resolved ${finalProducts.length}/${productRefs.length} products');
-      return finalProducts;
-
-    } catch (e, stackTrace) {
-      print('❌ HomeSectionRepo: Error in _resolveProducts: $e');
-      print('❌ HomeSectionRepo: Stack trace: $stackTrace');
-      return [];
-    }
-  }
-
-  /// Fetch products for a specific section from subcollection
-  /// Optimized version: fetches only product IDs and ranks, then uses batched resolution
-  Future<List<ProductModel>> _fetchSectionProducts(String categoryId, String sectionId) async {
-    try {
-      print('📦 HomeSectionRepo: Fetching product references for section: $categoryId/$sectionId');
+      log('🏠 HomeSectionRepo: Fetching active sections...');
       
       final querySnapshot = await _db
           .collection('home_sections')
-          .doc(categoryId)
-          .collection(sectionId)
+          .where('status', isEqualTo: 'active')
           .orderBy('rank')
           .get();
       
-      print('📊 HomeSectionRepo: Retrieved ${querySnapshot.docs.length} product references');
+      log('📊 HomeSectionRepo: Retrieved ${querySnapshot.docs.length} active sections');
       
-      // Extract product references with metadata
-      final List<_SectionProductRef> productRefs = [];
+      final sections = <HomeSectionModel>[];
       
       for (var doc in querySnapshot.docs) {
         try {
-          final data = doc.data();
-          final productId = data['productId'] as String?;
-          final rank = data['rank'] as int? ?? 0;
-          final priceOverride = data['priceOverride'] as num?;
+          final section = HomeSectionModel.fromFirestore(doc);
           
-          if (productId == null || productId.isEmpty) {
-            print('⚠️ HomeSectionRepo: Product ID missing for document ${doc.id}');
-            continue;
+          // Only include sections that are currently live
+          if (section.isLive) {
+            sections.add(section);
+            log('✅ HomeSectionRepo: Added live section: ${section.sectionId} (${section.title})');
+          } else {
+            log('⏰ HomeSectionRepo: Skipped section ${section.sectionId} - not live yet');
           }
-          
-          productRefs.add(_SectionProductRef(
-            productId: productId,
-            rank: rank,
-            priceOverride: priceOverride?.toDouble(),
-          ));
-          
         } catch (e) {
-          print('❌ HomeSectionRepo: Error processing product reference ${doc.id}: $e');
+          log('❌ HomeSectionRepo: Error parsing section ${doc.id}: $e');
         }
       }
       
-      print('🔍 HomeSectionRepo: Extracted ${productRefs.length} valid product references');
-      
-      // Use batched resolution to get all products at once
-      final products = await _resolveProducts(productRefs);
-      
-      print('🎉 HomeSectionRepo: Successfully resolved ${products.length} products for section $sectionId');
-      return products;
+      log('🎉 HomeSectionRepo: Successfully loaded ${sections.length} live sections');
+      return sections;
       
     } catch (e, stackTrace) {
-      print('❌ HomeSectionRepo: Error fetching products for section $sectionId: $e');
-      print('❌ HomeSectionRepo: Stack trace: $stackTrace');
+      log('❌ HomeSectionRepo: Error fetching active sections: $e');
+      log('❌ HomeSectionRepo: Stack trace: $stackTrace');
       return [];
     }
   }
 
-  /// Fetch all home sections for all categories
-  Future<Map<String, List<HomeSectionData>>> fetchAllHomeSections() async {
+  /// Fetch all sections (including inactive) sorted by rank
+  Future<List<HomeSectionModel>> fetchAllSections() async {
     try {
-      print('🏠 HomeSectionRepo: Fetching all home sections...');
+      log('🏠 HomeSectionRepo: Fetching all sections...');
       
-      final querySnapshot = await _db.collection('home_sections').get();
-      print('📊 HomeSectionRepo: Found ${querySnapshot.docs.length} category documents');
+      final querySnapshot = await _db
+          .collection('home_sections')
+          .orderBy('rank')
+          .get();
       
-      Map<String, List<HomeSectionData>> allSections = {};
+      log('📊 HomeSectionRepo: Retrieved ${querySnapshot.docs.length} sections');
+      
+      final sections = <HomeSectionModel>[];
       
       for (var doc in querySnapshot.docs) {
-        final categoryId = doc.id;
-        print('🔍 HomeSectionRepo: Processing category: $categoryId');
-        
-        final sections = await fetchHomeSectionsForCategory(categoryId);
-        allSections[categoryId] = sections;
-        
-        print('✅ HomeSectionRepo: Loaded ${sections.length} sections for $categoryId');
+        try {
+          final section = HomeSectionModel.fromFirestore(doc);
+          sections.add(section);
+        } catch (e) {
+          log('❌ HomeSectionRepo: Error parsing section ${doc.id}: $e');
+        }
       }
       
-      print('🎉 HomeSectionRepo: Successfully loaded home sections for ${allSections.length} categories');
-      return allSections;
+      log('🎉 HomeSectionRepo: Successfully loaded ${sections.length} sections');
+      return sections;
       
     } catch (e, stackTrace) {
-      print('❌ HomeSectionRepo: Error fetching all home sections: $e');
-      print('❌ HomeSectionRepo: Stack trace: $stackTrace');
+      log('❌ HomeSectionRepo: Error fetching all sections: $e');
+      log('❌ HomeSectionRepo: Stack trace: $stackTrace');
+      return [];
+    }
+  }
+
+  /// Fetch a specific section by ID
+  Future<HomeSectionModel?> fetchSectionById(String sectionId) async {
+    try {
+      log('🔍 HomeSectionRepo: Fetching section: $sectionId');
+      
+      final doc = await _db
+          .collection('home_sections')
+          .doc(sectionId)
+          .get();
+      
+      if (!doc.exists) {
+        log('⚠️ HomeSectionRepo: Section not found: $sectionId');
+        return null;
+      }
+      
+      final section = HomeSectionModel.fromFirestore(doc);
+      log('✅ HomeSectionRepo: Retrieved section: ${section.title}');
+      
+      return section;
+      
+    } catch (e, stackTrace) {
+      log('❌ HomeSectionRepo: Error fetching section $sectionId: $e');
+      log('❌ HomeSectionRepo: Stack trace: $stackTrace');
+      return null;
+    }
+  }
+
+  /// Fetch sections by type (e.g., flash_sale, popular, etc.)
+  Future<List<HomeSectionModel>> fetchSectionsByType(String type) async {
+    try {
+      log('🎯 HomeSectionRepo: Fetching sections of type: $type');
+      
+      final querySnapshot = await _db
+          .collection('home_sections')
+          .where('type', isEqualTo: type)
+          .where('status', isEqualTo: 'active')
+          .orderBy('rank')
+          .get();
+      
+      log('📊 HomeSectionRepo: Retrieved ${querySnapshot.docs.length} sections of type $type');
+      
+      final sections = <HomeSectionModel>[];
+      
+      for (var doc in querySnapshot.docs) {
+        try {
+          final section = HomeSectionModel.fromFirestore(doc);
+          if (section.isLive) {
+            sections.add(section);
+          }
+        } catch (e) {
+          log('❌ HomeSectionRepo: Error parsing section ${doc.id}: $e');
+        }
+      }
+      
+      log('🎉 HomeSectionRepo: Successfully loaded ${sections.length} live sections of type $type');
+      return sections;
+      
+    } catch (e, stackTrace) {
+      log('❌ HomeSectionRepo: Error fetching sections by type $type: $e');
+      log('❌ HomeSectionRepo: Stack trace: $stackTrace');
+      return [];
+    }
+  }
+
+  /// Fetch items for a specific section
+  /// Returns items sorted by rank, respecting maxItems limit if set
+  Future<List<HomeSectionItemModel>> fetchSectionItems(String sectionId, {int? limit}) async {
+    try {
+      log('📦 HomeSectionRepo: Fetching items for section: $sectionId');
+      
+      // Build query
+      Query<Map<String, dynamic>> query = _db
+          .collection('home_sections')
+          .doc(sectionId)
+          .collection('items')
+          .where('is_active', isEqualTo: true)
+          .orderBy('rank');
+      
+      // Apply limit if provided
+      if (limit != null && limit > 0) {
+        query = query.limit(limit);
+        log('📊 HomeSectionRepo: Applying limit: $limit');
+      }
+      
+      final querySnapshot = await query.get();
+      
+      log('📊 HomeSectionRepo: Retrieved ${querySnapshot.docs.length} items');
+      
+      final items = <HomeSectionItemModel>[];
+      
+      for (var doc in querySnapshot.docs) {
+        try {
+          final item = HomeSectionItemModel.fromFirestore(doc);
+          items.add(item);
+        } catch (e) {
+          log('❌ HomeSectionRepo: Error parsing item ${doc.id}: $e');
+        }
+      }
+      
+      log('🎉 HomeSectionRepo: Successfully loaded ${items.length} items for section $sectionId');
+      return items;
+      
+    } catch (e, stackTrace) {
+      log('❌ HomeSectionRepo: Error fetching items for section $sectionId: $e');
+      log('❌ HomeSectionRepo: Stack trace: $stackTrace');
+      return [];
+    }
+  }
+
+  /// Fetch items for a section with automatic limit from section config
+  Future<List<HomeSectionItemModel>> fetchSectionItemsWithConfig(HomeSectionModel section) async {
+    return fetchSectionItems(section.sectionId, limit: section.maxItems);
+  }
+
+  /// Fetch all sections with their items
+  /// Returns a map of section ID to items list
+  Future<Map<String, List<HomeSectionItemModel>>> fetchAllSectionsWithItems() async {
+    try {
+      log('🏠 HomeSectionRepo: Fetching all sections with items...');
+      
+      final sections = await fetchActiveSections();
+      final Map<String, List<HomeSectionItemModel>> sectionsWithItems = {};
+      
+      for (var section in sections) {
+        final items = await fetchSectionItemsWithConfig(section);
+        sectionsWithItems[section.sectionId] = items;
+        log('✅ HomeSectionRepo: Loaded ${items.length} items for ${section.sectionId}');
+      }
+      
+      log('🎉 HomeSectionRepo: Successfully loaded ${sectionsWithItems.length} sections with items');
+      return sectionsWithItems;
+      
+    } catch (e, stackTrace) {
+      log('❌ HomeSectionRepo: Error fetching all sections with items: $e');
+      log('❌ HomeSectionRepo: Stack trace: $stackTrace');
       return {};
     }
   }
 
-  /// Fetch specific section type for a category (e.g., flashSale for stationery)
-  Future<List<ProductModel>> fetchSectionProducts(String categoryId, String sectionType) async {
+  /// Stream active sections (real-time updates)
+  Stream<List<HomeSectionModel>> streamActiveSections() {
     try {
-      print('🎯 HomeSectionRepo: Fetching $sectionType products for $categoryId');
+      log('📡 HomeSectionRepo: Starting stream for active sections');
       
-      final products = await _fetchSectionProducts(categoryId, sectionType);
-      print('✅ HomeSectionRepo: Retrieved ${products.length} products for $categoryId/$sectionType');
-      
-      return products;
-      
-    } catch (e, stackTrace) {
-      print('❌ HomeSectionRepo: Error fetching $sectionType products for $categoryId: $e');
-      print('❌ HomeSectionRepo: Stack trace: $stackTrace');
-      return [];
+      return _db
+          .collection('home_sections')
+          .where('status', isEqualTo: 'active')
+          .orderBy('rank')
+          .snapshots()
+          .map((snapshot) {
+            final sections = <HomeSectionModel>[];
+            
+            for (var doc in snapshot.docs) {
+              try {
+                final section = HomeSectionModel.fromFirestore(doc);
+                if (section.isLive) {
+                  sections.add(section);
+                }
+              } catch (e) {
+                log('❌ HomeSectionRepo: Error parsing section ${doc.id} in stream: $e');
+              }
+            }
+            
+            log('📡 HomeSectionRepo: Stream update - ${sections.length} live sections');
+            return sections;
+          });
+          
+    } catch (e) {
+      log('❌ HomeSectionRepo: Error creating stream: $e');
+      return Stream.value([]);
     }
   }
-}
 
-/// Data model for home section
-class HomeSectionData {
-  final String sectionId;
-  final String title;
-  final String type;
-  final List<ProductModel> products;
-  final String categoryId;
+  /// Stream items for a specific section (real-time updates)
+  Stream<List<HomeSectionItemModel>> streamSectionItems(String sectionId, {int? limit}) {
+    try {
+      log('📡 HomeSectionRepo: Starting stream for section items: $sectionId');
+      
+      Query<Map<String, dynamic>> query = _db
+          .collection('home_sections')
+          .doc(sectionId)
+          .collection('items')
+          .where('is_active', isEqualTo: true)
+          .orderBy('rank');
+      
+      if (limit != null && limit > 0) {
+        query = query.limit(limit);
+      }
+      
+      return query.snapshots().map((snapshot) {
+        final items = <HomeSectionItemModel>[];
+        
+        for (var doc in snapshot.docs) {
+          try {
+            final item = HomeSectionItemModel.fromFirestore(doc);
+            items.add(item);
+          } catch (e) {
+            log('❌ HomeSectionRepo: Error parsing item ${doc.id} in stream: $e');
+          }
+        }
+        
+        log('📡 HomeSectionRepo: Stream update - ${items.length} items for $sectionId');
+        return items;
+      });
+      
+    } catch (e) {
+      log('❌ HomeSectionRepo: Error creating items stream: $e');
+      return Stream.value([]);
+    }
+  }
 
-  HomeSectionData({
-    required this.sectionId,
-    required this.title,
-    required this.type,
-    required this.products,
-    required this.categoryId,
-  });
-
-  @override
-  String toString() {
-    return 'HomeSectionData(sectionId: $sectionId, title: $title, type: $type, products: ${products.length}, categoryId: $categoryId)';
+  /// Fetch section items with pagination support
+  /// Returns paginated items for a section, ordered by rank
+  Future<List<HomeSectionItemModel>> fetchSectionItemsPaginated(
+    String sectionId, {
+    int page = 0,
+    int limit = 8,
+  }) async {
+    try {
+      log('📦 HomeSectionRepo: Fetching paginated items for section: $sectionId (page: $page, limit: $limit)');
+      
+      final offset = page * limit;
+      
+      Query<Map<String, dynamic>> query = _db
+          .collection('home_sections')
+          .doc(sectionId)
+          .collection('items')
+          .where('is_active', isEqualTo: true)
+          .orderBy('rank')
+          .limit(limit);
+      
+      // For offset, we need to fetch more documents and skip
+      if (offset > 0) {
+        final allDocs = await _db
+            .collection('home_sections')
+            .doc(sectionId)
+            .collection('items')
+            .where('is_active', isEqualTo: true)
+            .orderBy('rank')
+            .get();
+        
+        final itemList = <HomeSectionItemModel>[];
+        final docsToProcess = allDocs.docs.skip(offset).take(limit);
+        
+        for (var doc in docsToProcess) {
+          try {
+            final item = HomeSectionItemModel.fromFirestore(doc);
+            itemList.add(item);
+          } catch (e) {
+            log('❌ HomeSectionRepo: Error parsing item ${doc.id}: $e');
+          }
+        }
+        
+        log('📊 HomeSectionRepo: Retrieved ${itemList.length} paginated items (offset: $offset)');
+        return itemList;
+      }
+      
+      final querySnapshot = await query.get();
+      
+      log('📊 HomeSectionRepo: Retrieved ${querySnapshot.docs.length} items for page $page');
+      
+      final items = <HomeSectionItemModel>[];
+      
+      for (var doc in querySnapshot.docs) {
+        try {
+          final item = HomeSectionItemModel.fromFirestore(doc);
+          items.add(item);
+        } catch (e) {
+          log('❌ HomeSectionRepo: Error parsing item ${doc.id}: $e');
+        }
+      }
+      
+      log('🎉 HomeSectionRepo: Successfully loaded ${items.length} items for section $sectionId (page: $page)');
+      return items;
+      
+    } catch (e, stackTrace) {
+      log('❌ HomeSectionRepo: Error fetching paginated items for section $sectionId: $e');
+      log('❌ HomeSectionRepo: Stack trace: $stackTrace');
+      return [];
+    }
   }
 }

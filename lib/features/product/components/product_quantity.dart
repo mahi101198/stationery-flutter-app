@@ -265,7 +265,12 @@ class _ProductQuantityState extends State<ProductQuantity>
                             _animateButton();
                             widget.onQuantityChange(widget.quantity + 1);
                           }
-                        : null,
+                        : () {
+                            // Show gentle warning when at limit
+                            TLoaders.customToast(
+                              message: "Maximum $effectiveMaxQuantity units per order",
+                            );
+                          },
                     borderRadius: const BorderRadius.horizontal(
                       right: Radius.circular(16),
                     ),

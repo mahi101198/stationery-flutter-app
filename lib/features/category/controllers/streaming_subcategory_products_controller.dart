@@ -76,24 +76,41 @@ class StreamingSubCategoryProductsController extends GetxController {
 
     try {
       // First, get total count without loading all products
-      print('🌊 StreamingSubCategoryProductsController: Getting total product count...');
+      print('🌊 StreamingSubCategoryProductsController: Getting total product count for: $subCategoryId');
       final totalCount = await _productService.getProductCountForSubCategory(subCategoryId);
-      _totalCount.value = totalCount;
+      
+      // If no products found with the ID, try with the name (as fallback)
+      int adjustedTotalCount = totalCount;
+      String effectiveSubCategoryId = subCategoryId;
       
       if (totalCount == 0) {
+        print('⚠️ StreamingSubCategoryProductsController: No products found with ID: $subCategoryId');
+        print('🌊 StreamingSubCategoryProductsController: Trying to find products with name: $subCategoryName');
+        
+        // Try with subcategory name as fallback
+        adjustedTotalCount = await _productService.getProductCountForSubCategory(subCategoryName);
+        if (adjustedTotalCount > 0) {
+          print('✅ StreamingSubCategoryProductsController: Found ${adjustedTotalCount} products using name: $subCategoryName');
+          effectiveSubCategoryId = subCategoryName;
+        }
+      }
+      
+      _totalCount.value = adjustedTotalCount;
+      
+      if (adjustedTotalCount == 0) {
         _isLoading.value = false;
         print('🌊 StreamingSubCategoryProductsController: No products found');
         return;
       }
 
-      print('🌊 StreamingSubCategoryProductsController: Total products to load: $totalCount');
+      print('🌊 StreamingSubCategoryProductsController: Total products to load: $adjustedTotalCount (using ID: $effectiveSubCategoryId)');
       
       // Start streaming
       _isStreaming.value = true;
       _isLoading.value = false;
       
       // Stream products in batches
-      await _streamProductsInBatches(subCategoryId, totalCount);
+      await _streamProductsInBatches(effectiveSubCategoryId, adjustedTotalCount);
       
     } catch (e) {
       print('❌ StreamingSubCategoryProductsController: Error starting streaming: $e');

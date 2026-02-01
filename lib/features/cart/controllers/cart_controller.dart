@@ -9,6 +9,10 @@ import 'package:rps_stationery/utils/popups/loaders.dart';
 import 'package:rps_stationery/utils/loading/loading_state_manager.dart';
 import 'package:rps_stationery/utils/logging/app_logger.dart';
 
+/// Cart Controller
+/// NOTE: All productId references in cart items now refer to SKU IDs in the new architecture.
+/// Cart items are identified by their SKU ID (e.g., "NB-BLUE-P1") rather than
+/// product ID, allowing different variants to be tracked separately.
 class CartController extends GetxController {
   static CartController get instance {
     try {
@@ -59,6 +63,7 @@ class CartController extends GetxController {
 
   void startListeningToCart() {
     if (_currentUserId == null) {
+      print('⚠️ Cannot start cart listener: No user logged in');
       AppLogger.debug('Cannot start cart listener: No user logged in', tag: 'CartController');
       return;
     }
@@ -66,23 +71,44 @@ class CartController extends GetxController {
     // Cancel existing subscription before creating new one
     _cartSubscription?.cancel();
     
+    print('🔊 ════════════════════════════════════════════════════════');
+    print('🔊 STARTING CART LISTENER');
+    print('🔊 User ID: $_currentUserId');
+    print('🔊 ════════════════════════════════════════════════════════');
     AppLogger.debug('Starting cart listener for user: $_currentUserId', tag: 'CartController');
     
     // Listen to cart changes in real-time
     _cartSubscription = _cartService.getCartStream(_currentUserId!).listen(
       (cart) {
+        print('📥 ════════════════════════════════════════════════════════');
+        print('📥 CART STREAM UPDATE RECEIVED');
+        print('📥 ════════════════════════════════════════════════════════');
+        
         if (cart != null) {
+          print('✅ Cart data received: ${cart.items.length} items');
+          for (var item in cart.items) {
+            print('   - ${item.productId} x ${item.quantity}');
+          }
           AppLogger.debug('Cart updated: ${cart.items.length} items', tag: 'CartController');
           cartItems.assignAll(cart.items);
+          print('✅ Cart items updated in controller');
           _loadProductDetails();
+          print('✅ Loading product details...');
         } else {
+          print('⚠️ Cart is null or empty');
           AppLogger.debug('Cart is empty or deleted', tag: 'CartController');
           cartItems.clear();
           cartProducts.clear();
           calculateTotal();
         }
+        
+        print('📥 ════════════════════════════════════════════════════════');
       },
       onError: (error) {
+        print('❌ ════════════════════════════════════════════════════════');
+        print('❌ CART STREAM ERROR');
+        print('❌ Error: $error');
+        print('❌ ════════════════════════════════════════════════════════');
         AppLogger.logErrorWithContext('CartStream', error, StackTrace.current);
         // Silently handle error - no user notification in production
         // Try to reconnect after error
@@ -116,30 +142,31 @@ class CartController extends GetxController {
         isLoading.value = true;
       }
       
-      final productIds = cartItems.map((item) => item.productId).toList();
+      // NOTE: productId field now contains SKU IDs (e.g., "NB-BLUE-P1")
+      final skuIds = cartItems.map((item) => item.productId).toList();
       
       // Check if we have all products loaded
       final currentProductIds = cartProducts.map((p) => p.productId).toSet();
-      final requestedProductIds = productIds.toSet();
-      final missingProductIds = requestedProductIds.difference(currentProductIds);
       
       AppLogger.debug(
-        'Loading products - Current: ${currentProductIds.length}, Requested: ${requestedProductIds.length}, Missing: ${missingProductIds.length}',
+        'Loading products for ${skuIds.length} SKUs',
         tag: 'CartController');
       
-      // If all products are loaded and count matches (no new items), just recalculate total
-      if (missingProductIds.isEmpty && 
-          currentProductIds.length == requestedProductIds.length && 
-          !showLoading) {
-        AppLogger.debug('All products already loaded, skipping fetch', tag: 'CartController');
-        calculateTotal();
-        return;
+      // Fetch products by SKU IDs from product_details collection
+      AppLogger.debug('Fetching products for ${skuIds.length} SKUs from product_details', tag: 'CartController');
+      final products = await _productService.getProductsBySKUIds(skuIds);
+      AppLogger.debug('Fetched ${products.length} unique products successfully', tag: 'CartController');
+      
+      // DEBUG: Log image URLs for each product
+      for (final product in products) {
+        print('📦 Product loaded: ${product.title}');
+        print('   ├─ Product ID: ${product.productId}');
+        print('   ├─ Main Image: ${product.media.mainImage}');
+        print('   ├─ Display Image: ${product.displayImage}');
+        print('   ├─ Gallery Images: ${product.media.galleryImages.length}');
+        print('   └─ All Images: ${product.allImages.length}');
       }
       
-      // Fetch all products to ensure consistency
-      AppLogger.debug('Fetching ${productIds.length} products from service', tag: 'CartController');
-      final products = await _productService.getProductsByIds(productIds);
-      AppLogger.debug('Fetched ${products.length} products successfully', tag: 'CartController');
       cartProducts.assignAll(products);
       calculateTotal();
     } catch (e) {
@@ -213,46 +240,85 @@ class CartController extends GetxController {
     }
   }
 
-  Future<void> addToCart(String productId, int quantity, {String? selectedColor}) async {
+  Future<void> addToCart(String productId, int quantity, {String? selectedColor, ProductModel? productContext}) async {
+    print('🛒 ════════════════════════════════════════════════════════');
+    print('🛒 CART CONTROLLER - ADD TO CART');
+    print('🛒 ════════════════════════════════════════════════════════');
+    print('  Product ID (SKU): $productId');
+    print('  Quantity: $quantity');
+    print('  Selected Color: $selectedColor');
+    
     try {
       if (_currentUserId == null) {
+        print('❌ No user logged in');
         AppLogger.error('Add to cart failed: No user logged in', tag: 'CART');
         return;
       }
       
+      print('✅ User ID: $_currentUserId');
+      
       if (productId.isEmpty) {
+        print('❌ Empty product ID');
         AppLogger.error('Add to cart failed: Empty product ID', tag: 'CART');
         return;
       }
       
       if (quantity <= 0) {
+        print('❌ Invalid quantity: $quantity');
         AppLogger.error('Add to cart failed: Invalid quantity $quantity', tag: 'CART');
         return;
       }
       
+      // Validate max per order limit if product context is provided
+      if (productContext != null) {
+        final sku = productContext.productSkus.firstWhereOrNull((s) => s.skuId == productId);
+        if (sku != null && quantity > sku.maxPerOrder) {
+          TLoaders.customToast(
+            message: "Maximum ${sku.maxPerOrder} units per order for this item.",
+          );
+          AppLogger.warning('Max per order limit: ${sku.maxPerOrder} for $productId', tag: 'CART');
+          return;
+        }
+      }
+      
+      print('✅ Validation passed');
       AppLogger.logCartOperation('addToCart', productId: productId, quantity: quantity);
       
+      print('🔄 Calling CartService.addToCart...');
       await executeWithLoading(
         'addToCart',
         () async {
+          print('  🔹 Inside executeWithLoading callback');
           await _cartService.addToCart(
             userId: _currentUserId!, 
             productId: productId, 
             quantity: quantity,
             selectedColor: selectedColor,
+            productContext: productContext,
           );
+          print('  ✅ CartService.addToCart completed');
         },
         loadingMessage: 'Adding to cart...',
       );
       
+      print('✅ ════════════════════════════════════════════════════════');
+      print('✅ CART CONTROLLER - ADD TO CART SUCCESS');
+      print('✅ ════════════════════════════════════════════════════════');
+      
       // Removed notification for better UX - cart addition is indicated by UI changes
     } catch (e) {
+      print('❌ ════════════════════════════════════════════════════════');
+      print('❌ CART CONTROLLER - ADD TO CART ERROR');
+      print('❌ Error: $e');
+      print('❌ Error type: ${e.runtimeType}');
+      print('❌ Stack trace: ${StackTrace.current}');
+      print('❌ ════════════════════════════════════════════════════════');
       AppLogger.logErrorWithContext('addToCart', e, StackTrace.current);
       // Silently handle error - no user notification in production
     }
   }
 
-  Future<void> updateCartItemQuantity(String productId, int quantity) async {
+  Future<void> updateCartItemQuantity(String productId, int quantity, {ProductModel? productContext}) async {
     // Store original quantity for rollback
     final originalItem = cartItems.firstWhereOrNull((item) => item.productId == productId);
     final originalQuantity = originalItem?.quantity ?? 0;
@@ -269,14 +335,22 @@ class CartController extends GetxController {
       }
       
       // Get product details for validation
-      final product = cartProducts.firstWhereOrNull((p) => p.productId == productId);
-      if (product == null) {
-        AppLogger.error('Update cart failed: Product details not found', tag: 'CART');
-        return;
-      }
+      final product = productContext ?? cartProducts.firstWhereOrNull((p) => p.productId == productId);
       
-      // Validate quantity before optimistic update silently
-      if (quantity > 0) {
+      // Only validate if product is found
+      if (product != null && quantity > 0) {
+        // Find the specific SKU for this cart item
+        final sku = product.productSkus.firstWhereOrNull((s) => s.skuId == productId);
+        
+        // Check max per order limit (SKU-level)
+        if (sku != null && quantity > sku.maxPerOrder) {
+          TLoaders.customToast(
+            message: "Maximum ${sku.maxPerOrder} units per order for this item.",
+          );
+          AppLogger.warning('Max per order limit: ${sku.maxPerOrder} for $productId', tag: 'CART');
+          return;
+        }
+        
         // Check stock availability silently
         if (quantity > product.stock) {
           AppLogger.warning('Stock limit: Only ${product.stock} available for $productId', tag: 'CART');
@@ -318,6 +392,7 @@ class CartController extends GetxController {
           userId: _currentUserId!, 
           productId: productId, 
           quantity: quantity,
+          productContext: productContext,
         );
       }
       
@@ -348,19 +423,24 @@ class CartController extends GetxController {
     total.value = 0.0;
     
     for (final cartItem in cartItems) {
+      // Find the product containing this SKU
       final product = cartProducts.firstWhereOrNull(
-        (p) => p.productId == cartItem.productId,
+        (p) => p.productSkus.any((sku) => sku.skuId == cartItem.productId),
       );
       
-      if (product != null && product.price > 0) {
-        final price = product.hasDiscount 
-            ? product.price 
-            : product.price;
-        total.value += price * cartItem.quantity;
+      if (product != null) {
+        // Find the specific SKU within the product
+        final sku = product.productSkus.firstWhereOrNull(
+          (s) => s.skuId == cartItem.productId,
+        );
+        
+        if (sku != null && sku.price > 0) {
+          // Use SKU price for calculation
+          total.value += sku.price * cartItem.quantity;
+        }
       } else {
         // Log missing product for debugging
-            // Log missing product for debugging
-            // AppLogger.warning('Product not found for cart item: ${cartItem.productId}', tag: 'CartController');
+        AppLogger.warning('Product not found for SKU: ${cartItem.productId}', tag: 'CartController');
       }
     }
   }
@@ -396,8 +476,29 @@ class CartController extends GetxController {
   }
   
   // Helper method to get product details for a cart item
-  ProductModel? getProductForCartItem(String productId) {
-    return cartProducts.firstWhereOrNull((p) => p.productId == productId);
+  ProductModel? getProductForCartItem(String skuId) {
+    // productId in cartItem actually contains SKU ID, not product ID
+    // So we need to find the product that contains this SKU
+    try {
+      final product = cartProducts.firstWhereOrNull((p) {
+        final hasSku = p.productSkus.any((sku) => sku.skuId == skuId);
+        if (hasSku) {
+          print('✅ [getProductForCartItem] Found product for SKU: $skuId');
+          print('   Product: ${p.title}');
+          print('   Product ID: ${p.productId}');
+        }
+        return hasSku;
+      });
+      
+      if (product == null) {
+        print('⚠️  [getProductForCartItem] No product found for SKU: $skuId');
+      }
+      
+      return product;
+    } catch (e) {
+      print('❌ [getProductForCartItem] Error finding product for SKU: $skuId, Error: $e');
+      return null;
+    }
   }
   
   // Helper method to get CartItem by productId

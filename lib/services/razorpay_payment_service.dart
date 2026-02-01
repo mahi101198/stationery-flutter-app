@@ -66,6 +66,7 @@ class RazorpayPaymentService extends GetxController {
     try {
       print('🔍 Preparing order items with product details...');
       print('🔍 Is Buy Now: $isBuyNow');
+      print('🔍 Cart items count: ${cartItems.length}');
       
       if (isBuyNow && buyNowData != null) {
         // Handle Buy Now flow - product data is already available
@@ -81,18 +82,24 @@ class RazorpayPaymentService extends GetxController {
           'name': product.name,
           'price': product.price,
           'productImage': product.displayImage,
-          'discountPrice': product.price, // Use price as discountPrice since discount is already applied
+          'discountPrice': product.price,
           if (selectedColor != null) 'selectedColor': selectedColor,
         }];
       } else {
         // Handle regular cart flow
         // Get all product IDs from cart items
-        final productIds = cartItems.map((item) => item.productId).toList();
-        print('🔍 Fetching product details for IDs: $productIds');
+        final cartProductIds = cartItems.map((item) => item.productId).toList();
+        print('🔍 Cart product IDs (may include SKUs): $cartProductIds');
         
         // Fetch product details
-        final products = await _productService.getProductsByIds(productIds);
-        print('🔍 Fetched ${products.length} products');
+        print('🔍 Fetching product details for IDs...');
+        final products = await _productService.getProductsByIds(cartProductIds);
+        print('🔍 ✅ Fetched ${products.length} products from ${cartProductIds.length} IDs');
+        
+        // Debug: Show what we got
+        for (int i = 0; i < products.length; i++) {
+          print('   Product $i: ${products[i].name} (ID: ${products[i].productId})');
+        }
         
         // Create order items with full product details
         final orderItems = cartItems.map((cartItem) {
@@ -100,18 +107,21 @@ class RazorpayPaymentService extends GetxController {
           final product = products.firstWhereOrNull((p) => p.productId == cartItem.productId);
           
           if (product != null) {
-            print('✅ Found product details for ${cartItem.productId}: ${product.name}, Color: ${cartItem.selectedColor}');
+            print('✅ Found product details for ${cartItem.productId}: ${product.name}, Image: ${product.displayImage}');
             return {
               'productId': cartItem.productId,
               'quantity': cartItem.quantity,
               'name': product.name,
               'price': product.price,
               'productImage': product.displayImage,
-              'discountPrice': product.price, // Use price as discountPrice since discount is already applied
+              'discountPrice': product.price,
               if (cartItem.selectedColor != null) 'selectedColor': cartItem.selectedColor,
             };
           } else {
-            print('⚠️ Product details not found for ${cartItem.productId}, using fallback');
+            print('⚠️ Product details NOT found for ${cartItem.productId}, using fallback');
+            print('   Cart item SKU/ID: ${cartItem.productId}');
+            print('   Available products: ${products.map((p) => p.productId).toList()}');
+            
             return {
               'productId': cartItem.productId,
               'quantity': cartItem.quantity,
@@ -129,6 +139,7 @@ class RazorpayPaymentService extends GetxController {
       }
     } catch (e) {
       print('❌ Error preparing order items: $e');
+      print('❌ Stack trace: $e');
       // Fallback to basic items if product fetch fails
       if (isBuyNow && buyNowData != null) {
         final product = buyNowData['product'];
@@ -139,7 +150,7 @@ class RazorpayPaymentService extends GetxController {
           'name': product.name,
           'price': product.price,
           'productImage': product.displayImage,
-          'discountPrice': product.price, // Use price as discountPrice since discount is already applied
+          'discountPrice': product.price,
         }];
       } else {
         return cartItems.map((item) => {

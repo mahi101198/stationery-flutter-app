@@ -10,6 +10,8 @@ import 'package:rps_stationery/data/database/app_database.dart';
 import 'package:rps_stationery/data/repositories/auth/auth_repository.dart';
 import 'package:rps_stationery/data/models/cart_model.dart' as cart_models;
 import 'package:rps_stationery/data/models/product_model.dart';
+import 'package:rps_stationery/data/models/product_sku_model.dart';
+import 'package:rps_stationery/data/models/delivery_info_model.dart';
 import 'package:rps_stationery/utils/exceptions/firebase_exceptions.dart';
 import 'package:rps_stationery/utils/exceptions/format_exceptions.dart';
 import 'package:rps_stationery/utils/exceptions/platform_exceptions.dart';
@@ -311,8 +313,7 @@ class ProductCacheService extends GetxController {
     try {
       final snapshot =
           await _firestore
-              .collection('products')
-              .where('isActive', isEqualTo: true)
+              .collection('product_details')
               .get();
 
       await _localDatabase.transaction(() async {
@@ -549,37 +550,93 @@ class ProductCacheService extends GetxController {
     return await _executeWithErrorHandling(() async {
       final List<ProductModel> products = [];
       
-      for (final productId in productIds) {
-        final product = await getProductById(productId);
+      print('🔍 getProductsByIds: Received ${productIds.length} IDs (SKU or Product IDs)');
+      
+      for (final idToFetch in productIds) {
+        print('🔍 Fetching product/SKU: $idToFetch');
+        
+        // Try to fetch directly using the ID (whether it's SKU or product ID)
+        final product = await getProductById(idToFetch);
         if (product != null) {
+          print('✅ Found: ${product.name} (ID: $idToFetch)');
           products.add(product);
+        } else {
+          print('⚠️ Product not found for: $idToFetch');
         }
       }
       
+      print('✅ getProductsByIds: Successfully fetched ${products.length}/${productIds.length} products');
       return products;
     });
   }
 
   /// Get product by ID from cache, with fallback to remote if not found
+  /// Handles both base product IDs and SKU IDs
   Future<ProductModel?> getProductById(String productId) async {
     return await _executeWithErrorHandling(() async {
-      // First try to get from local cache
+      print('🔍 getProductById: Looking for product: $productId');
+      
+      // First try to get from local cache (handles both base ID and SKU ID)
       final localResult =
           await (_localDatabase.select(_localDatabase.products)
             ..where((p) => p.id.equals(productId))).getSingleOrNull();
 
       if (localResult != null) {
+        print('✅ getProductById: Found in local cache: $productId');
         return _convertProductEntityToModel(localResult);
       }
 
       // If not found in local cache and we're online, try remote
       if (isOnline.value) {
         try {
-          final remoteDoc =
-              await _firestore.collection('products').doc(productId).get();
+          // Try direct lookup first (for base product IDs)
+          print('📡 Fetching from Firestore: product_details/$productId');
+          var remoteDoc =
+              await _firestore.collection('product_details').doc(productId).get();
+
+          // If not found and productId looks like a SKU (contains hyphens), try to extract base product ID
+          if (!remoteDoc.exists && productId.contains('-')) {
+            print('⚠️ Direct lookup failed for $productId, trying base product ID extraction...');
+            
+            // Extract base product ID (everything before the last hyphen-number pattern)
+            // Examples: "scale-infinity-small-4pt8in" → "scale-infinity-small"
+            //           "pen-ball-balaji-20pack" → "pen-ball-balaji"
+            final parts = productId.split('-');
+            
+            // Find where the SKU variant starts (usually last 1-2 parts with numbers)
+            String baseProductId = productId;
+            
+            // Try removing last part if it looks like a variant (contains numbers/letters mixed)
+            if (parts.isNotEmpty) {
+              final lastPart = parts.last;
+              if (lastPart.contains(RegExp(r'\d'))) {
+                baseProductId = parts.sublist(0, parts.length - 1).join('-');
+                print('   Trying base product ID: $baseProductId');
+                remoteDoc = await _firestore.collection('product_details').doc(baseProductId).get();
+              }
+            }
+          }
 
           if (remoteDoc.exists) {
+            print('✅ Found product document: ${remoteDoc.id}');
             final product = ProductModel.fromFirestore(remoteDoc);
+
+            // If we searched for a SKU, find matching SKU details and update pricing
+            if (productId != remoteDoc.id) {
+              print('📦 SKU lookup: Finding SKU "$productId" in product_skus array...');
+              final matchingSku = product.productSkus.firstWhereOrNull(
+                (sku) => sku.skuId == productId
+              );
+              
+              if (matchingSku != null) {
+                print('✅ Found matching SKU: ${matchingSku.skuId}');
+                print('   Price: ${matchingSku.price}, MRP: ${matchingSku.mrp}');
+                // Product model already contains the full product data with all SKUs
+                // The order details screen will handle selecting the right SKU
+              } else {
+                print('⚠️ SKU "$productId" not found in product_skus array');
+              }
+            }
 
             // Cache the product locally for future use
             await _localDatabase
@@ -587,9 +644,12 @@ class ProductCacheService extends GetxController {
                 .insertOnConflictUpdate(_convertProductModelToEntity(product));
 
             return product;
+          } else {
+            print('❌ Product not found in Firestore: $productId');
           }
         } catch (e) {
-          log('Error fetching product from remote: $e');
+          log('❌ Error fetching product from remote: $e');
+          print('❌ Error fetching product from remote: $e');
         }
       }
 
@@ -606,8 +666,8 @@ class ProductCacheService extends GetxController {
       }
 
       try {
-        // Fetch basic product info from products collection
-        final productDoc = await _firestore.collection('products').doc(productId).get();
+        // Fetch basic product info from product_details collection
+        final productDoc = await _firestore.collection('product_details').doc(productId).get();
         
         if (!productDoc.exists) {
           return null;
@@ -622,6 +682,13 @@ class ProductCacheService extends GetxController {
             .get();
 
         if (productDetailsDoc.exists) {
+          // TODO: Legacy code - needs migration to SKU-based ProductModel
+          // The fromMergedData method doesn't exist in the new model
+          // For now, return the basic product
+          log('⚠️ ProductCacheService: fromMergedData not implemented - returning basic product');
+          return basicProduct;
+          
+          /* LEGACY CODE - COMMENTED OUT
           final detailsData = productDetailsDoc.data()!;
           
           // Merge the detailed information with basic product info using new factory
@@ -637,6 +704,7 @@ class ProductCacheService extends GetxController {
               .insertOnConflictUpdate(_convertProductModelToEntity(completeProduct));
 
           return completeProduct;
+          */
         } else {
           return basicProduct;
         }
@@ -673,7 +741,7 @@ class ProductCacheService extends GetxController {
 
     try {
       final remoteDoc =
-          await _firestore.collection('products').doc(productId).get();
+          await _firestore.collection('product_details').doc(productId).get();
 
       if (remoteDoc.exists) {
         final product = ProductModel.fromFirestore(remoteDoc);
@@ -722,7 +790,7 @@ class ProductCacheService extends GetxController {
       for (final productId in productIds) {
         await _executeWithErrorHandling(() async {
           final remoteDoc =
-              await _firestore.collection('products').doc(productId).get();
+              await _firestore.collection('product_details').doc(productId).get();
 
           if (remoteDoc.exists) {
             final product = ProductModel.fromFirestore(remoteDoc);
@@ -943,23 +1011,35 @@ class ProductCacheService extends GetxController {
       miniInfoList = [];
     }
     
+    // Create a default SKU from legacy data to ensure pricing works
+    final defaultSku = ProductSKUModel(
+      skuId: '${product.id}_default',
+      attributes: const {},
+      mrp: product.mrp ?? 0.0,
+      price: product.price ?? 0.0,
+      availability: product.isActive && product.stock > 0 ? 'in_stock' : 'out_of_stock',
+      availableQuantity: product.stock,
+      maxPerOrder: 50, // Default limit for legacy products
+    );
+    
     return ProductModel(
       productId: product.id,
-      name: product.name,
-      categoryId: product.category, // Map legacy category to categoryId
-      subcategoryId: '', // Legacy doesn't have subcategory, use empty string
-      mrp: product.mrp, // Read MRP from database
-      price: product.price, // Read selling price from database
-      discount: product.discount, // Read discount percentage from database
-      image: imagesList.isNotEmpty ? imagesList.first : '', // Use first image as primary image
-      stock: product.stock,
-      isActive: product.isActive,
+      title: product.name, // Map name to title
+      description: product.description ?? '',
+      brand: '', // Legacy doesn't have brand
+      category: product.category,
+      subCategory: '', // Legacy doesn't have subcategory
+      media: ProductMediaModel(
+        mainImage: imagesList.isNotEmpty ? imagesList.first : '',
+        galleryImages: imagesList.length > 1 ? imagesList.sublist(1) : [],
+      ),
+      variantAttributes: const {}, // Legacy doesn't have variants
+      productSkus: [defaultSku], // Create default SKU with pricing data
+      overallAvailability: product.isActive && product.stock > 0 ? 'in_stock' : 'out_of_stock',
+      contentCards: const [], // Legacy doesn't have content cards
+      deliveryInfo: DeliveryInfoModel.empty(),
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
-      description: product.description ?? '',
-      images: imagesList,
-      tags: miniInfoList, // Map miniInfo to tags
-      miniInfo: miniInfoList,
     );
   }
 

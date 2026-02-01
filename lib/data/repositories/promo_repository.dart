@@ -117,7 +117,7 @@ class PromoRepository extends GetxController {
           // Get product categories and check
           bool hasApplicableCategory = false;
           for (String productId in productIds) {
-            final productDoc = await _db.collection('products').doc(productId).get();
+            final productDoc = await _db.collection('product_details').doc(productId).get();
             if (productDoc.exists) {
               final productCategory = productDoc.data()?['categoryId'];
               if (productCategory != null && applicableCategories.contains(productCategory)) {

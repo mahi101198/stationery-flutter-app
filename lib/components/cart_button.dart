@@ -42,7 +42,7 @@ class CartButton extends StatelessWidget {
         child: SizedBox(
           height: 64,
           child: Material(
-            color: Theme.of(context).colorScheme.primary,
+            color: Color(0xFF5A7C8A),
             clipBehavior: Clip.hardEdge,
             shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.all(
@@ -65,14 +65,18 @@ class CartButton extends StatelessWidget {
                         children: [
                           Text(
                             "₹ ${HelperFunctions.formatCurrency(totalPrice)}",
-                            style: Theme.of(context).textTheme.titleSmall!
-                                .copyWith(color: Theme.of(context).colorScheme.onPrimary),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: Theme.of(context).textTheme.titleSmall!.fontSize,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           Text(
                             "Total price",
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
+                              color: Colors.white.withValues(alpha: 0.75),
                               fontWeight: FontWeight.w500,
+                              fontSize: 12,
                             ),
                           ),
                         ],
@@ -84,7 +88,7 @@ class CartButton extends StatelessWidget {
                     child: Container(
                       alignment: Alignment.center,
                       height: double.infinity,
-                      color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.15),
+                      color: Colors.white.withValues(alpha: 0.15),
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 300),
                         child:
@@ -94,9 +98,7 @@ class CartButton extends StatelessWidget {
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Theme.of(context).colorScheme.onPrimary,
-                                    ),
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                   ),
                                 )
                                 : Row(
@@ -104,10 +106,11 @@ class CartButton extends StatelessWidget {
                                   children: [
                                     Text(
                                       message,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleSmall!
-                                          .copyWith(color: Theme.of(context).colorScheme.onPrimary),
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: Theme.of(context).textTheme.titleSmall!.fontSize,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                     if (message == "Go to cart") ...[
                                       const SizedBox(width: 8),
@@ -127,7 +130,7 @@ class CartButton extends StatelessWidget {
                                               opacity: 0.7 + (value * 0.3),
                                               child: Icon(
                                                 Icons.arrow_forward,
-                                                color: Theme.of(context).colorScheme.onPrimary,
+                                                color: Colors.white,
                                                 size: 18,
                                               ),
                                             ),

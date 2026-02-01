@@ -1,0 +1,113 @@
+﻿======================================================================
+CHECKING PRODUCT STRUCTURE IN FIRESTORE
+======================================================================
+
+≡ƒôª Checking available collections...
+
+Available collections:
+  - banners
+  - carts
+  - categories
+  - coupons
+  - deliveries
+  - home_sections
+  - notifications
+  - product_details
+  - promotions
+  - referrals
+  - reviews
+  - settings
+  - subcategories
+  - users
+  - wishlists
+
+≡ƒôª Product-related collections found:
+  - product_details
+
+======================================================================
+≡ƒôï COLLECTION: product_details
+======================================================================
+Total documents: 3
+
+
+≡ƒôä Document NaN: cleaning-floor-001
+----------------------------------------------------------------------
+Top-level fields:
+  product_id: "cleaning-floor-001" (string)
+  description: "Powerful disinfectant floor cleaner that kills 99...." (string)
+  brand: "CleanPro" (string)
+  created_at: 1769612399 (number)
+  variant_attributes: {size, fragrance...} (object)
+  product_skus: [6 items] (array)
+  overall_availability: "in_stock" (string)
+  delivery_info: {cod_available, return_policy, delivery_estimate_text...} (object)
+  tags: [4 items] (array)
+  average_rating: 0 (number)
+  review_count: 0 (number)
+  is_active: true (boolean)
+  content_cards: [3 items] (array)
+  updated_at: 1769612508591 (number)
+  sub_category: "cleaning supplies" (string)
+  name: "Citrus Fresh - Kills 99.9% Germs" (string)
+  media: {main_image, gallery_images...} (object)
+  primary_sku_id: "floor-001-500ml-citrus" (string)
+  title: "bbbb" (string)
+  category: "housekeeping" (string)
+
+≡ƒôä Document NaN: cleaning-toilet-001
+----------------------------------------------------------------------
+Top-level fields:
+  product_id: "cleaning-toilet-001" (string)
+  name: "Toilet Cleaner" (string)
+  title: "Extra Power - Removes Tough Stains" (string)
+  description: "Industrial strength toilet cleaner that removes to..." (string)
+  brand: "Harpic" (string)
+  category: "cleaning" (string)
+  sub_category: "toilet_cleaner" (string)
+  created_at: 1769612399 (number)
+  updated_at: 1769612399 (number)
+  media: {main_image...} (object)
+  variant_attributes: {size, variant...} (object)
+  product_skus: [4 items] (array)
+  overall_availability: "in_stock" (string)
+  content_cards: [2 items] (array)
+  delivery_info: {cod_available, return_policy, delivery_estimate_text...} (object)
+  tags: [4 items] (array)
+  average_rating: 0 (number)
+  review_count: 0 (number)
+  is_active: true (boolean)
+
+≡ƒôä Document NaN: electronics-earphone-001
+----------------------------------------------------------------------
+Top-level fields:
+  product_id: "electronics-earphone-001" (string)
+  name: "Wired Earphones with Mic" (string)
+  title: "Deep Bass - Tangle-Free Cable" (string)
+  description: "High-quality wired earphones with built-in microph..." (string)
+  brand: "SoundMax" (string)
+  category: "electronics" (string)
+  sub_category: "earphones" (string)
+  created_at: 1769612399 (number)
+  updated_at: 1769612399 (number)
+  media: {main_image, gallery_images...} (object)
+  variant_attributes: {color, jack_type...} (object)
+  product_skus: [6 items] (array)
+  overall_availability: "in_stock" (string)
+  content_cards: [3 items] (array)
+  delivery_info: {cod_available, return_policy, delivery_estimate_text...} (object)
+  tags: [5 items] (array)
+  average_rating: 0 (number)
+  review_count: 0 (number)
+  is_active: true (boolean)
+
+
+======================================================================
+≡ƒöì CHECKING PRODUCTS REFERENCED IN HOME SECTIONS
+======================================================================
+
+
+Looking for product: floor-001-500ml-citrus
+  Γ¥î Not found in: product_details
+
+Looking for product: floor-001-2L-citrus
+  Γ¥î Not found in: product_details

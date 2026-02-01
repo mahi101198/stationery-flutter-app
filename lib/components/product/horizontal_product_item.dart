@@ -253,17 +253,19 @@ class HorizontalProductItem extends StatelessWidget {
                       Obx(() {
                         final cartController = CartController.instance;
                         final cartItem = cartController.getCartItemByProductId(product.productId);
-                        final isInCart = cartItem != null;
+                        final isCurrentProductInCart = cartItem != null;
+                        final hasItemsInCart = cartController.cartItems.isNotEmpty;
+                        final showGoToCart = isCurrentProductInCart || hasItemsInCart;
                         
                         return SizedBox(
                           width: double.infinity,
                           child: ThemeAwareButton(
-                            text: isInCart ? 'Go to Cart' : 'Add to Cart',
-                            variant: isInCart ? ButtonVariant.secondary : ButtonVariant.primary,
+                            text: showGoToCart ? 'Go to Cart' : 'Add to Cart',
+                            variant: showGoToCart ? ButtonVariant.secondary : ButtonVariant.primary,
                             size: ButtonSize.small,
-                            icon: isInCart ? Iconsax.shopping_cart : Iconsax.add,
+                            icon: showGoToCart ? Iconsax.shopping_cart : Iconsax.add,
                             onPressed: onAddToCart ?? () async {
-                              if (isInCart) {
+                              if (showGoToCart) {
                                 // Go to cart
                                 Get.offNamedUntil(
                                   Routes.bottomNav,

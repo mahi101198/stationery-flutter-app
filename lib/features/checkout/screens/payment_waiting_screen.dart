@@ -24,12 +24,12 @@ class PaymentWaitingScreen extends StatelessWidget {
               children: [
                 // Loading animation
                 SizedBox(
-                  width: 200,
-                  height: 200,
+                  width: 80,
+                  height: 80,
                   child: CircularProgressIndicator(
-                    strokeWidth: 4,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Theme.of(context).colorScheme.primary,
+                    strokeWidth: 3,
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Color(0xFF5A7C8A),
                     ),
                   ),
                 ),
@@ -39,8 +39,10 @@ class PaymentWaitingScreen extends StatelessWidget {
                 // Main message
                 Text(
                   message,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF16161E),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -51,18 +53,20 @@ class PaymentWaitingScreen extends StatelessWidget {
                 if (subMessage != null)
                   Text(
                     subMessage!,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF737378),
                     ),
                     textAlign: TextAlign.center,
                   ),
                 
                 const SizedBox(height: 16),
                 
-                Text(
+                const Text(
                   'Please do not close this screen',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF737378),
                     fontStyle: FontStyle.italic,
                   ),
                 ),

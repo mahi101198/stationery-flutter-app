@@ -20,23 +20,36 @@ class AddressListPage extends StatelessWidget {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+            elevation: 0,
             centerTitle: true,
             title: const Padding(
               padding: EdgeInsets.only(top: 4.0),
-              child: Text("Addresses"),
+              child: Text(
+                "Addresses",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF16161E),
+                ),
+              ),
+            ),
+            leading: IconButton(
+              icon: const Icon(Iconsax.arrow_left, color: Color(0xFF16161E)),
+              onPressed: () => Get.back(),
             ),
           ),
           SliverToBoxAdapter(child: _buildAddAddressButton(context)),
           SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: defaultPadding + 8,
-                vertical: defaultPadding / 2,
-              ),
+              padding: const EdgeInsets.fromLTRB(defaultPadding, defaultPadding / 2, defaultPadding, defaultPadding / 2),
               child: Text(
                 "Saved Addresses",
-                style: Theme.of(context).textTheme.titleMedium,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF16161E),
+                ),
               ),
             ),
           ),
@@ -52,17 +65,16 @@ class AddressListPage extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           onTap: () => Get.to(() => const AddressFormPage()),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(12),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: Theme.of(
-                  context,
-                ).colorScheme.primary.withValues(alpha: 0.2),
+                color: const Color(0xFFE8E8E9),
+                width: 1,
               ),
             ),
             child: Row(
@@ -70,31 +82,30 @@ class AddressListPage extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(8),
+                    color: const Color(0xFFF3F3F4),
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Iconsax.add,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 20,
+                    color: Color(0xFF5A7C8A),
+                    size: 18,
                   ),
                 ),
                 const SizedBox(width: 12),
-                Expanded(
+                const Expanded(
                   child: Text(
                     'Add New Address',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
+                    style: TextStyle(
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
+                      color: Color(0xFF16161E),
                     ),
                   ),
                 ),
-                Icon(
+                const Icon(
                   Iconsax.arrow_right_3,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.5),
-                  size: 20,
+                  color: Color(0xFF737378),
+                  size: 18,
                 ),
               ],
             ),
@@ -114,14 +125,13 @@ class AddressListPage extends StatelessWidget {
       if (controller.addresses.isEmpty) {
         return SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.only(top: 50),
+            padding: const EdgeInsets.only(top: 50),
             child: Center(
               child: Text(
                 'No saved addresses yet.',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.6),
+                style: TextStyle(
+                  fontSize: 15,
+                  color: const Color(0xFF737378),
                 ),
               ),
             ),

@@ -1,0 +1,38 @@
+﻿======================================================================
+FIXING HOME SECTION ITEMS
+======================================================================
+
+Found 3 sections
+
+
+≡ƒôª Section: flash_sale (Flash Sale)
+   Total items: 1
+   Γ£à Item OK: toilet-001-1L-original (productId: cleaning-toilet-001)
+   Summary: 0 fixed
+
+≡ƒôª Section: new_arrivals (New Arrivals)
+   Total items: 1
+   Γ£à Item OK: floor-001-1L-citrus (productId: floor-001-1L-citrus)
+   Summary: 0 fixed
+
+≡ƒôª Section: popular_items (Popular Items)
+   Total items: 2
+   Γ£à Item OK: floor-001-2L-citrus (productId: cleaning-floor-001)
+   Γ£à Item OK: floor-001-500ml-citrus (productId: cleaning-floor-001)
+   Summary: 0 fixed
+
+
+======================================================================
+Γ£à COMPLETE: Fixed 0 items total
+======================================================================
+
+
+VERIFYING FIX...
+
+flash_sale:
+  - toilet-001-1L-original: productId=cleaning-toilet-001, skuId=toilet-001-1L-original
+new_arrivals:
+  - floor-001-1L-citrus: productId=floor-001-1L-citrus, skuId=floor-001-1L-citrus
+popular_items:
+  - floor-001-2L-citrus: productId=cleaning-floor-001, skuId=floor-001-2L-citrus
+  - floor-001-500ml-citrus: productId=cleaning-floor-001, skuId=floor-001-500ml-citrus

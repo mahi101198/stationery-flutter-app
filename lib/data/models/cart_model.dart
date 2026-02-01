@@ -1,11 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Cart item model following enterprise schema
+/// 
+/// NOTE: In the new SKU-based architecture:
+/// - productId field now stores SKU IDs (e.g., "NB-BLUE-P1") instead of product IDs
+/// - Each SKU represents a unique purchasable item with its own pricing and inventory
+/// - selectedColor field is DEPRECATED - variant attributes are now part of the SKU
 class CartItem {
-  final String productId;
+  final String productId; // Stores SKU ID (e.g., "NB-BLUE-P1")
   final int quantity;
   final DateTime addedAt;
-  final String? selectedColor;  // Selected color option
+  final String? selectedColor;  // DEPRECATED: Use SKU attributes instead
 
   const CartItem({
     required this.productId,

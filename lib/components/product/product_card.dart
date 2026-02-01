@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rps_stationery/data/models/product_model.dart';
+import 'package:rps_stationery/utils/theme/component_styles.dart';
 
 import '../network_image_with_loader.dart';
 
@@ -185,7 +186,7 @@ class _ProductCardState extends State<ProductCard>
                                 isVerySmall ? 4 : 8,
                                 isVerySmall ? 3 : 5,
                                 isVerySmall ? 4 : 8,
-                                isVerySmall ? 4 : 6,
+                                isVerySmall ? 2 : 3,
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -363,32 +364,15 @@ class _ProductCardState extends State<ProductCard>
                 horizontal: isVerySmall ? 4 : 6,
                 vertical: isVerySmall ? 2 : 3,
               ),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFFFF6B6B),
-                    Color(0xFFEE5A6F),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(isVerySmall ? 4 : 6),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFF6B6B).withValues(alpha: 0.4),
-                    blurRadius: isVerySmall ? 4 : 6,
-                    offset: Offset(0, isVerySmall ? 1 : 2),
-                  ),
-                ],
+              decoration: ComponentStyles.discountBadgeDecoration(
+                borderRadius: isVerySmall ? 4 : 6,
               ),
               child: isVerySmall
                   ? Text(
                       "$discountPercent%",
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: ComponentStyles.discountBadgeTextStyle(
                         fontSize: 7,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.2,
+                        bold: true,
                       ),
                     )
                   : Row(
@@ -402,11 +386,9 @@ class _ProductCardState extends State<ProductCard>
                         const SizedBox(width: 3),
                         Text(
                           "$discountPercent% OFF",
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: ComponentStyles.discountBadgeTextStyle(
                             fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.3,
+                            bold: true,
                           ),
                         ),
                       ],
@@ -443,42 +425,19 @@ class _ProductCardState extends State<ProductCard>
         if (widget.product.hasDiscount && !isVerySmall) ...[
           Text(
             "₹${widget.product.mrp.toStringAsFixed(0)}",
-            style: TextStyle(
-              fontSize: widget.isCompact ? 10 : 10,
-              color: isDark
-                  ? theme.colorScheme.onSurface.withValues(alpha: 0.4)
-                  : theme.colorScheme.onSurface.withValues(alpha: 0.5),
-              decoration: TextDecoration.lineThrough,
-              decorationColor: isDark
-                  ? theme.colorScheme.onSurface.withValues(alpha: 0.4)
-                  : theme.colorScheme.onSurface.withValues(alpha: 0.5),
-              decorationThickness: 1.5,
-              height: 1.1,
-            ),
+            style: ComponentStyles.originalPriceStyle(theme, isDark),
           ),
           const SizedBox(height: 1),
         ],
         // Selling Price with gradient
         ShaderMask(
-          shaderCallback: (bounds) => LinearGradient(
-            colors: isDark
-                ? [
-                    theme.colorScheme.primary,
-                    theme.colorScheme.primary.withValues(alpha: 0.8),
-                  ]
-                : [
-                    theme.colorScheme.primary,
-                    theme.colorScheme.secondary,
-                  ],
-          ).createShader(bounds),
+          shaderCallback: (bounds) =>
+              ComponentStyles.getPriceGradient(isDark).createShader(bounds),
           child: Text(
             "₹${widget.product.price.toStringAsFixed(0)}",
-            style: TextStyle(
-              fontSize: isVerySmall ? 11 : (widget.isCompact ? 14 : 14),
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: isVerySmall ? 0.15 : 0.2,
-              height: 1.1,
+            style: ComponentStyles.sellingPriceStyle(
+              theme,
+              widget.isCompact,
             ),
           ),
         ),

@@ -41,7 +41,7 @@ class ReviewRepository extends GetxController {
     return safeCall(() async {
       // Check if user already reviewed this product
       final existingReview = await _db
-          .collection('products')
+          .collection('product_details')
           .doc(productId)
           .collection('reviews')
           .doc(userId)
@@ -75,7 +75,7 @@ class ReviewRepository extends GetxController {
 
       // Add review to product subcollection
       await _db
-          .collection('products')
+          .collection('product_details')
           .doc(productId)
           .collection('reviews')
           .doc(userId)
@@ -109,7 +109,7 @@ class ReviewRepository extends GetxController {
 
       // Update in product subcollection
       await _db
-          .collection('products')
+          .collection('product_details')
           .doc(productId)
           .collection('reviews')
           .doc(userId)
@@ -133,7 +133,7 @@ class ReviewRepository extends GetxController {
     return safeCall(() async {
       // Delete from product subcollection
       await _db
-          .collection('products')
+          .collection('product_details')
           .doc(productId)
           .collection('reviews')
           .doc(userId)
@@ -164,7 +164,7 @@ class ReviewRepository extends GetxController {
   }) async {
     return safeCall(() async {
       Query query = _db
-          .collection('products')
+          .collection('product_details')
           .doc(productId)
           .collection('reviews')
           .orderBy(orderBy!, descending: descending);
@@ -202,7 +202,7 @@ class ReviewRepository extends GetxController {
   Future<Map<String, dynamic>?> getUserProductReview(String productId) async {
     return safeCall(() async {
       final doc = await _db
-          .collection('products')
+          .collection('product_details')
           .doc(productId)
           .collection('reviews')
           .doc(userId)
@@ -221,7 +221,7 @@ class ReviewRepository extends GetxController {
   Future<void> markReviewHelpful(String productId, String reviewUserId) async {
     return safeCall(() async {
       await _db
-          .collection('products')
+          .collection('product_details')
           .doc(productId)
           .collection('reviews')
           .doc(reviewUserId)
@@ -248,7 +248,7 @@ class ReviewRepository extends GetxController {
   Future<void> reportReview(String productId, String reviewUserId, String reason) async {
     return safeCall(() async {
       await _db
-          .collection('products')
+          .collection('product_details')
           .doc(productId)
           .collection('reviews')
           .doc(reviewUserId)
@@ -265,7 +265,7 @@ class ReviewRepository extends GetxController {
   Future<Map<String, dynamic>> getProductReviewStats(String productId) async {
     return safeCall(() async {
       final reviews = await _db
-          .collection('products')
+          .collection('product_details')
           .doc(productId)
           .collection('reviews')
           .get();
@@ -364,7 +364,7 @@ class ReviewRepository extends GetxController {
     try {
       final stats = await getProductReviewStats(productId);
       
-      await _db.collection('products').doc(productId).update({
+      await _db.collection('product_details').doc(productId).update({
         'averageRating': stats['averageRating'],
         'totalReviews': stats['totalReviews'],
         'updatedAt': FieldValue.serverTimestamp(),
@@ -377,7 +377,7 @@ class ReviewRepository extends GetxController {
   /// Get reviews stream for real-time updates
   Stream<List<Map<String, dynamic>>> getProductReviewsStream(String productId) {
     return _db
-        .collection('products')
+        .collection('product_details')
         .doc(productId)
         .collection('reviews')
         .orderBy('createdAt', descending: true)

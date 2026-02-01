@@ -89,10 +89,13 @@ class ProductController extends GetxController {
       productList.assignAll(products);
       resetError();
       
-      if (products.isEmpty) {
+      if (products.isNotEmpty) {
+        dev.log('✅ Successfully loaded ${products.length} products', name: 'ProductController');
+      } else {
         dev.log('⚠️ No products returned from repository!', name: 'ProductController');
-        dev.log('💡 Check if products exist in Firestore and have isActive: true', name: 'ProductController');
+        dev.log('💡 Check if products exist in Firestore product_details collection', name: 'ProductController');
         
+        // Only set error if truly no products found after all retries
         hasError.value = true;
         errorMessage.value = "No products found. Please check if products exist in the database.";
         
@@ -102,8 +105,6 @@ class ProductController extends GetxController {
             message: "No products are currently available. Please try refreshing."
           );
         }
-      } else {
-        dev.log('✅ Successfully loaded ${products.length} products', name: 'ProductController');
       }
       
     } catch (e) {

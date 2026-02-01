@@ -12,7 +12,7 @@ class ProductService extends GetxController {
 
   /// Collection references
   CollectionReference<Map<String, dynamic>> get _productsCollection =>
-      _firestore.collection('products');
+      _firestore.collection('product_details');
   CollectionReference<Map<String, dynamic>> get _categoriesCollection =>
       _firestore.collection('categories');
 
@@ -396,6 +396,104 @@ class ProductService extends GetxController {
     } catch (e) {
       log('❌ Error creating categories stream: $e');
       return Stream.value([]);
+    }
+  }
+
+  // SKU-BASED METHODS FOR CART INTEGRATION
+
+  /// Get product by SKU ID from product_details collection
+  /// Returns the product containing the specified SKU
+  Future<ProductModel?> getProductBySKUId(String skuId) async {
+    try {
+      if (skuId.isEmpty) return null;
+
+      log('🔍 Fetching product for SKU: $skuId');
+
+      // Query product_details collection
+      // Note: This queries all products and filters in-memory
+      // For better performance, consider adding a SKU index in Firestore
+      final querySnapshot = await _firestore
+          .collection('product_details')
+          .get();
+
+      for (final doc in querySnapshot.docs) {
+        final product = ProductModel.fromFirestore(doc);
+        
+        // Check if this product contains the SKU
+        final hasSKU = product.productSkus.any((sku) => sku.skuId == skuId);
+        
+        if (hasSKU) {
+          log('✅ Found product for SKU $skuId: ${product.productId}');
+          log('   ├─ Title: ${product.title}');
+          log('   ├─ Main Image URL: ${product.media.mainImage}');
+          log('   ├─ Display Image: ${product.displayImage}');
+          log('   └─ Image Empty: ${product.displayImage.isEmpty}');
+          return product;
+        }
+      }
+
+      log('⚠️ No product found for SKU: $skuId');
+      return null;
+    } catch (e) {
+      log('❌ Error fetching product by SKU ID: $e');
+      return null;
+    }
+  }
+
+  /// Get products by multiple SKU IDs from product_details collection
+  /// Returns list of products containing the specified SKUs
+  /// Note: productId field in cart items now stores SKU IDs
+  Future<List<ProductModel>> getProductsBySKUIds(List<String> skuIds) async {
+    try {
+      if (skuIds.isEmpty) return [];
+
+      log('🔍 Fetching products for ${skuIds.length} SKUs');
+
+      final List<ProductModel> products = [];
+      final Set<String> seenProductIds = {};
+
+      // Fetch products for each SKU
+      for (final skuId in skuIds) {
+        final product = await getProductBySKUId(skuId);
+        
+        if (product != null && !seenProductIds.contains(product.productId)) {
+          products.add(product);
+          seenProductIds.add(product.productId);
+        }
+      }
+
+      log('✅ Fetched ${products.length} unique products for ${skuIds.length} SKUs');
+      return products;
+    } catch (e) {
+      log('❌ Error fetching products by SKU IDs: $e');
+      return [];
+    }
+  }
+
+  /// Get product details from product_details collection
+  /// This is the new primary method for fetching product details
+  Future<ProductModel?> getProductDetails(String productId) async {
+    try {
+      if (productId.isEmpty) return null;
+
+      log('🔍 Fetching product details: $productId');
+
+      final doc = await _firestore
+          .collection('product_details')
+          .doc(productId)
+          .get();
+
+      if (doc.exists) {
+        final product = ProductModel.fromFirestore(doc);
+        log('✅ Product details fetched: ${product.title}');
+        return product;
+      }
+
+      log('⚠️ Product not found: $productId');
+      return null;
+    } catch (e) {
+      log('❌ Error fetching product details: $e');
+      return null;
     }
   }
 

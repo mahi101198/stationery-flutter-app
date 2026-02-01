@@ -9,6 +9,7 @@ import 'package:rps_stationery/features/personalization/screens/address/address_
 import 'package:rps_stationery/data/models/user_model.dart' as user_schema;
 import 'package:rps_stationery/utils/theme/design_system.dart';
 import 'package:rps_stationery/services/app_settings_service.dart';
+import 'package:rps_stationery/utils/theme/component_styles.dart';
 
 class AddressFormPage extends StatefulWidget {
   final user_schema.UserAddress? addressToEdit;
@@ -308,13 +309,13 @@ class _AddressFormPageState extends State<AddressFormPage> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomScrollView(
         slivers: [
-          // Modern App Bar with Gradient
+          // Minimal App Bar - Theme aware
           SliverAppBar(
-            expandedHeight: 140,
+            expandedHeight: 120,
             floating: false,
             pinned: true,
             elevation: 0,
-            backgroundColor: Theme.of(context).colorScheme.surface,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             leading: IconButton(
               icon: Icon(Iconsax.arrow_left, color: Theme.of(context).colorScheme.onSurface),
               onPressed: () {
@@ -324,16 +325,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                      Theme.of(context).colorScheme.secondary.withValues(alpha: 0.05),
-                    ],
-                  ),
-                ),
+                color: Theme.of(context).scaffoldBackgroundColor,
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(
                     DesignSystem.spacing.md,
@@ -350,13 +342,13 @@ class _AddressFormPageState extends State<AddressFormPage> {
                           Container(
                             padding: EdgeInsets.all(DesignSystem.spacing.sm),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                              color: const Color(0xFFF3F3F4),
                               borderRadius: DesignSystem.borders.md,
                             ),
-                            child: Icon(
+                            child: const Icon(
                               Iconsax.location,
-                              color: Theme.of(context).colorScheme.primary,
-                              size: 24,
+                              color: Color(0xFF5A7C8A),
+                              size: 20,
                             ),
                           ),
                           SizedBox(width: DesignSystem.spacing.md),
@@ -366,10 +358,11 @@ class _AddressFormPageState extends State<AddressFormPage> {
                               children: [
                                 Text(
                                   widget.addressToEdit == null ? 'Add New Address' : 'Edit Address',
-                                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                  style: TextStyle(
+                                    fontSize: 20,
                                     fontWeight: FontWeight.w700,
-                                    letterSpacing: -0.5,
                                     color: Theme.of(context).colorScheme.onSurface,
+                                    letterSpacing: -0.5,
                                   ),
                                 ),
                                 SizedBox(height: DesignSystem.spacing.xs),
@@ -377,7 +370,8 @@ class _AddressFormPageState extends State<AddressFormPage> {
                                   widget.addressToEdit == null 
                                       ? 'Complete the form below to add a new delivery address'
                                       : 'Update your delivery address details',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  style: TextStyle(
+                                    fontSize: 13,
                                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                                   ),
                                 ),
@@ -538,11 +532,10 @@ class _AddressFormPageState extends State<AddressFormPage> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: Colors.white,
         borderRadius: DesignSystem.borders.lg,
-        boxShadow: DesignSystem.shadows.elevation1,
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+          color: const Color(0xFFE8E8E9),
           width: 1,
         ),
       ),
@@ -554,7 +547,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
             padding: EdgeInsets.all(DesignSystem.spacing.md),
             child: Row(
               children: [
-                Icon(icon, color: Theme.of(context).colorScheme.primary, size: 24),
+                Icon(icon, color: const Color(0xFF5A7C8A), size: 20),
                 SizedBox(width: DesignSystem.spacing.md),
                 Expanded(
                   child: Column(
@@ -562,16 +555,18 @@ class _AddressFormPageState extends State<AddressFormPage> {
                     children: [
                       Text(
                         title,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        style: const TextStyle(
+                          fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
+                          color: Color(0xFF16161E),
                         ),
                       ),
                       SizedBox(height: DesignSystem.spacing.xs / 2),
                       Text(
                         subtitle,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF737378),
                         ),
                       ),
                     ],
@@ -875,16 +870,15 @@ class _AddressFormPageState extends State<AddressFormPage> {
     TextInputType keyboardType = TextInputType.text,
     bool isRequired = true,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w500,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF16161E),
           ),
         ),
         const SizedBox(height: 8),
@@ -892,35 +886,34 @@ class _AddressFormPageState extends State<AddressFormPage> {
           controller: controller,
           keyboardType: keyboardType,
           textCapitalization: TextCapitalization.words,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          style: const TextStyle(
+            fontSize: 15,
             fontWeight: FontWeight.normal,
+            color: Color(0xFF16161E),
           ),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.4),
+            hintStyle: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFFD0D0D2),
             ),
             filled: true,
-            fillColor: isDark 
-                ? Colors.grey[850]?.withOpacity(0.3)
-                : Colors.grey[50],
+            fillColor: Colors.white,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide.none,
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: isDark 
-                    ? Colors.grey[700]!.withOpacity(0.3)
-                    : Colors.grey[300]!,
+              borderSide: const BorderSide(
+                color: Color(0xFFE8E8E9),
                 width: 1,
               ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+              borderSide: const BorderSide(
+                color: Color(0xFF5A7C8A),
                 width: 1.5,
               ),
             ),

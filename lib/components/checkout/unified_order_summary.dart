@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:collection/collection.dart';
 import 'package:rps_stationery/utils/constants/colors.dart';
 import 'package:rps_stationery/utils/constants/sizes.dart';
 import 'package:rps_stationery/utils/price_calculator.dart';
@@ -7,6 +8,7 @@ import 'package:rps_stationery/data/models/user_model.dart';
 import 'package:rps_stationery/data/models/product_model.dart';
 import 'package:rps_stationery/data/repositories/product_repo.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:rps_stationery/utils/theme/component_styles.dart';
 
 /// Unified order summary component used across all checkout screens
 /// This replaces all duplicate order summary widgets
@@ -155,8 +157,8 @@ class UnifiedOrderSummary extends StatelessWidget {
   }
 
   Widget _buildMiniProductCard(BuildContext context, dynamic item) {
-    return FutureBuilder<ProductModel>(
-      future: ProductRepo.instance.getProductById(item.productId),
+    return FutureBuilder<ProductModel?>(
+      future: ProductRepo.instance.getProductBySKUId(item.productId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return _buildLoadingCard(context);
@@ -167,7 +169,7 @@ class UnifiedOrderSummary extends StatelessWidget {
         }
         
         final product = snapshot.data!;
-        return _buildProductCard(context, product, item.quantity);
+        return _buildProductCard(context, product, item.quantity, item.productId);
       },
     );
   }
@@ -289,7 +291,10 @@ class UnifiedOrderSummary extends StatelessWidget {
     );
   }
 
-  Widget _buildProductCard(BuildContext context, ProductModel product, int quantity) {
+  Widget _buildProductCard(BuildContext context, ProductModel product, int quantity, String skuId) {
+    // Find the SKU details
+    final sku = product.productSkus.firstWhereOrNull((s) => s.skuId == skuId);
+    
     return Container(
       margin: const EdgeInsets.symmetric(vertical: TSizes.xs),
       padding: const EdgeInsets.all(TSizes.sm),
@@ -341,6 +346,7 @@ class UnifiedOrderSummary extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Product Name
                 Text(
                   product.name,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -349,12 +355,28 @@ class UnifiedOrderSummary extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (product.hasDiscount) ...[
+                // SKU Variant Details
+                if (sku != null && sku.attributes.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    sku.attributes.entries
+                        .map((e) => '${e.key.replaceAll('_', ' ')}: ${e.value}')
+                        .join(', '),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 11,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                // Price
+                if (sku != null && sku.hasDiscount) ...[
                   const SizedBox(height: 2),
                   Row(
                     children: [
                       Text(
-                        '₹${product.price.toStringAsFixed(0)}',
+                        '₹${sku.price.toStringAsFixed(0)}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: TColors.success,
@@ -362,26 +384,18 @@ class UnifiedOrderSummary extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '₹${product.mrp.toStringAsFixed(0)}',
+                        '₹${sku.mrp.toStringAsFixed(0)}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           decoration: TextDecoration.lineThrough,
                           color: Theme.of(context).colorScheme.outline,
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${product.discount.toStringAsFixed(0)}% OFF',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: TColors.success,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
                     ],
                   ),
-                ] else ...[
+                ] else if (sku != null) ...[
                   const SizedBox(height: 2),
                   Text(
-                    '₹${product.price.toStringAsFixed(0)}',
+                    '₹${sku.price.toStringAsFixed(0)}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,

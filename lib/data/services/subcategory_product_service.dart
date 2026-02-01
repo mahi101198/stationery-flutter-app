@@ -94,18 +94,38 @@ class SubCategoryProductService extends GetxService {
     }
   }
 
-  /// Get product count for a specific subcategory
+  /// Get product count for a specific subcategory (with fallback to try both ID and name)
   Future<int> getProductCountForSubCategory(String subCategoryId) async {
     try {
       print('📦 SubCategoryProductService: Getting product count for subcategory: $subCategoryId');
       
-      final QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('products')
-          .where('subcategoryId', isEqualTo: subCategoryId)
+      // Try exact match first
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('product_details')
+          .where('sub_category', isEqualTo: subCategoryId)
           .get();
       
-      final count = snapshot.docs.length;
-      print('📦 SubCategoryProductService: Found $count products for subcategory: $subCategoryId');
+      int count = snapshot.docs.length;
+      print('📦 SubCategoryProductService: Found $count products with exact ID match for: $subCategoryId');
+      
+      // If no results, try with case-insensitive match or different format
+      if (count == 0) {
+        print('⚠️ SubCategoryProductService: No products found with exact match, trying case-insensitive...');
+        
+        // Get all products and filter locally (last resort)
+        snapshot = await FirebaseFirestore.instance
+            .collection('product_details')
+            .get();
+        
+        final searchId = subCategoryId.toLowerCase();
+        count = snapshot.docs.where((doc) {
+          final subCat = (doc['sub_category'] as String?)?.toLowerCase() ?? '';
+          return subCat == searchId || subCat.contains(searchId) || searchId.contains(subCat);
+        }).length;
+        
+        print('📦 SubCategoryProductService: Found $count products with case-insensitive match for: $subCategoryId');
+      }
+      
       return count;
       
     } catch (e) {
@@ -114,7 +134,7 @@ class SubCategoryProductService extends GetxService {
     }
   }
 
-  /// Get products for a specific subcategory with pagination support
+  /// Get products for a specific subcategory with pagination support (with fallback)
   Future<List<ProductModel>> getProductsForSubCategory(String subCategoryId, {
     bool forceRefresh = false,
     int limit = 10,
@@ -123,16 +143,35 @@ class SubCategoryProductService extends GetxService {
     print('📦 SubCategoryProductService: Getting products for subcategory: $subCategoryId (limit: $limit, offset: $offset)');
     
     try {
-      // For now, get all products and slice them (Firestore doesn't support offset directly)
-      // In a production app, you'd use cursor-based pagination with startAfter
+      // Try exact match first
       Query query = FirebaseFirestore.instance
-          .collection('products')
-          .where('subcategoryId', isEqualTo: subCategoryId);
+          .collection('product_details')
+          .where('sub_category', isEqualTo: subCategoryId);
 
-      final QuerySnapshot snapshot = await query.get();
+      QuerySnapshot snapshot = await query.get();
       
-      final allProducts = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
+      List<QueryDocumentSnapshot<Map<String, dynamic>>> docsToProcess = snapshot.docs.cast();
+      
+      // If no results with exact match, try case-insensitive and collect all
+      if (docsToProcess.isEmpty) {
+        print('⚠️ SubCategoryProductService: No products found with exact match for: $subCategoryId, trying case-insensitive...');
+        
+        final allSnapshot = await FirebaseFirestore.instance
+            .collection('product_details')
+            .get();
+        
+        // Filter locally
+        final searchId = subCategoryId.toLowerCase();
+        docsToProcess = allSnapshot.docs.where((doc) {
+          final subCat = (doc['sub_category'] as String?)?.toLowerCase() ?? '';
+          return subCat == searchId || subCat.contains(searchId) || searchId.contains(subCat);
+        }).cast<QueryDocumentSnapshot<Map<String, dynamic>>>().toList();
+        
+        print('📦 SubCategoryProductService: Found ${docsToProcess.length} products with case-insensitive match');
+      }
+      
+      final allProducts = docsToProcess.map((doc) {
+        final data = doc.data();
         // Add document ID to the data
         data['productId'] = doc.id;
         return ProductModel.fromMap(data);

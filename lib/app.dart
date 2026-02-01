@@ -16,34 +16,20 @@ class App extends StatelessWidget {
     return ErrorBoundary(
       fallbackTitle: 'App Error',
       fallbackMessage: 'Something went wrong with the app. Please restart the application.',
-      child: Directionality(
-        textDirection: TextDirection.ltr,
-        child: GetMaterialApp(
-          title: TTexts.appName,
-          themeMode: ThemeMode.system, // Start with system, will be updated by ThemeController
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          debugShowCheckedModeBanner: false,
-          initialBinding: GeneralBindings(),
-          getPages: AppPages.routes,
-          // Temporarily disable SpacingDebugOverlay for app startup
-          // builder: (context, child) {
-          //   // Wrap the app with SpacingDebugOverlay inside MaterialApp where Directionality is available
-          //   if (kDebugMode && child != null) {
-          //     return SpacingDebugOverlay(
-          //       showOverlay: true,
-          //       child: child,
-          //     );
-          //   }
-          //   return child ?? const SizedBox.shrink();
-          // },
-          // Remove home to let AuthRepository handle initial routing
-          unknownRoute: GetPage(
-            name: '/unknown',
-            page: () => const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(),
-              ),
+      child: GetMaterialApp(
+        title: TTexts.appName,
+        themeMode: ThemeMode.system, // Default theme, will be updated by ThemeController
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        debugShowCheckedModeBanner: false,
+        initialBinding: GeneralBindings(),
+        getPages: AppPages.routes,
+        // Remove home to let AuthRepository handle initial routing
+        unknownRoute: GetPage(
+          name: '/unknown',
+          page: () => const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
             ),
           ),
         ),

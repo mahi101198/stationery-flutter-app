@@ -10,6 +10,7 @@ class Routes {
   static const orderDetails = '/order-details';
   static const category = '/category';
   static const subCategoryProducts = '/subcategory-products';
+  static const sectionViewAll = '/section-view-all';
   static const notification = '/notification';
   static const addressSelection = '/address-selection';
   static const priceSummary = '/price-summary';

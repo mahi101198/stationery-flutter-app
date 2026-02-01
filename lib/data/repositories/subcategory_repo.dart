@@ -23,15 +23,30 @@ class SubCategoryModel {
   });
 
   factory SubCategoryModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return SubCategoryModel(
-      id: data['id'] as String,
-      categoryId: data['categoryId'] as String,
-      name: data['name'] as String,
-      image: data['image'] as String,
-      isActive: data['isActive'] as bool,
-      rank: (data['rank'] as num).toInt(),
-    );
+    try {
+      final data = doc.data() as Map<String, dynamic>?;
+      
+      if (data == null) {
+        print('⚠️ SubCategoryRepo: Document ${doc.id} has null data');
+        throw Exception('Document data is null');
+      }
+      
+      // Log the raw data for debugging
+      print('📝 SubCategoryRepo: Raw data for ${doc.id}: $data');
+      
+      return SubCategoryModel(
+        id: doc.id,
+        categoryId: data['category_id'] as String? ?? data['categoryId'] as String? ?? '',
+        name: data['name'] as String? ?? 'Unknown',
+        image: data['image'] as String? ?? '',
+        isActive: data['is_active'] as bool? ?? data['isActive'] as bool? ?? false,
+        rank: (data['rank'] as num?)?.toInt() ?? 0,
+      );
+    } catch (e, stackTrace) {
+      print('❌ SubCategoryRepo: Error parsing subcategory ${doc.id}: $e');
+      print('❌ Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   @override

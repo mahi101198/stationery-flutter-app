@@ -1,0 +1,93 @@
+{
+    "product_id": "your-product-id",
+    "title": "Your Product Title",
+    "subtitle": "Brief description · Key features · Premium quality",
+    "brand": "Brand Name",
+    "category": "Main Category",
+    "sub_category": "Subcategory",
+    "media": {
+        "main_image": {
+            "url": "https://your-image-url.com/main.jpg",
+            "alt_text": "Product name"
+        },
+        "gallery": [
+            {
+                "url": "https://your-image-url.com/image1.jpg",
+                "alt_text": "Product view 1"
+            },
+            {
+                "url": "https://your-image-url.com/image2.jpg",
+                "alt_text": "Product view 2"
+            }
+        ]
+    },
+    "variant_attributes": {},
+    "product_skus": [
+        {
+            "sku_id": "your-product-sku-id",
+            "attributes": {
+                "size": "Size value",
+                "color": "Color value",
+                "pack": "Pack size"
+            },
+            "price": 100,
+            "mrp": 150,
+            "currency": "INR",
+            "availability": "in_stock",
+            "available_quantity": 50
+        }
+    ],
+    "overall_availability": "in_stock",
+    "content_cards": [
+        {
+            "card_id": "highlights",
+            "title": "Highlights",
+            "type": "list",
+            "order": 1,
+            "data": [
+                "Feature 1",
+                "Feature 2",
+                "Feature 3",
+                "Feature 4"
+            ]
+        },
+        {
+            "card_id": "description",
+            "title": "Product Description",
+            "type": "text",
+            "order": 2,
+            "data": "Detailed product description goes here. Explain what the product is, what it's used for, and why customers should buy it."
+        },
+        {
+            "card_id": "specifications",
+            "title": "Specifications",
+            "type": "key_value",
+            "order": 3,
+            "data": {
+                "Size": "Product size",
+                "Weight": "Product weight",
+                "Material": "Product material",
+                "Color": "Product color",
+                "Country of Origin": "India"
+            }
+        }
+    ],
+    "delivery_info": {
+        "estimated_delivery": "3-5 business days",
+        "return_policy": "7 days return",
+        "cod_available": true,
+        "free_delivery_threshold": 499
+    },
+    "rating": {
+        "average": 0,
+        "count": 0
+    },
+    "purchase_limits": {
+        "max_per_order": 50,
+        "max_per_user_per_day": 20
+    },
+    "is_active": true,
+    "created_at": "__SERVER_TIMESTAMP__",
+    "updated_at": "__SERVER_TIMESTAMP__",
+    "uploaded_at": "__SERVER_TIMESTAMP__"
+}

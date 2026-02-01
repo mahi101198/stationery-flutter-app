@@ -346,6 +346,14 @@ export const createOrder = onCall({ cors: true }, async (request) => {
             }
             transaction.set(orderRef, orderData);
             console.log('✅ Created orders document');
+            console.log('📊 Order Document Structure:', {
+                orderId,
+                status: orderData.status,
+                itemsCount: orderData.items.length,
+                firstItem: orderData.items[0],
+                amountBreakdown: orderData.amountBreakdown,
+                createdAt: orderData.createdAt
+            });
             // 2d. Create comprehensive deliveries document
             const deliveryRef = db.collection('deliveries').doc(deliveryId);
             transaction.set(deliveryRef, {

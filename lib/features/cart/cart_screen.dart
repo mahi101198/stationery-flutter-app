@@ -13,6 +13,7 @@ import 'package:rps_stationery/data/models/user_model.dart';
 import 'package:rps_stationery/data/services/user_service.dart';
 import 'package:rps_stationery/features/personalization/screens/address/address_form_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:rps_stationery/utils/theme/component_styles.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -86,6 +87,7 @@ class _CartScreenState extends State<CartScreen> with WidgetsBindingObserver {
 
     return Obx(
       () => Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         bottomNavigationBar: controller.isLoading.value
             ? Container(
                 padding: EdgeInsets.all(DesignSystem.spacing.lg),
@@ -97,114 +99,43 @@ class _CartScreenState extends State<CartScreen> with WidgetsBindingObserver {
               )
             : controller.cartItems.isNotEmpty
                 ? Container(
-                    decoration: const BoxDecoration(
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(24),
-                      ),
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: DesignSystem.spacing.lg,
+                      vertical: DesignSystem.spacing.md,
                     ),
-                    child: ThemeAwareCard(
-                      elevation: 12,
-                      borderRadius: 24,
-                    margin: EdgeInsets.zero,
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                     child: SafeArea(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Enhanced total summary
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                                  Theme.of(context).colorScheme.secondary.withValues(alpha: 0.05),
-                                ],
+                          // Minimal checkout button - matching reference color
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: Material(
+                              color: Color(0xFF6B8FA3), // Muted blue-gray from reference
+                              borderRadius: BorderRadius.circular(14),
+                              child: InkWell(
+                                onTap: () => _navigateToAddressSelection(controller),
+                                borderRadius: BorderRadius.circular(14),
+                                child: Center(
+                                  child: Text(
+                                    'Proceed to checkout',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ),
                               ),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  flex: 2,
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Total Amount',
-                                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '₹${_calculateTotal(controller.total.value).toStringAsFixed(0)}',
-                                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: Theme.of(context).colorScheme.primary,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Flexible(
-                                  flex: 1,
-                                  child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.primary,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Iconsax.shopping_bag,
-                                        size: 16,
-                                        color: Theme.of(context).colorScheme.onPrimary,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '${controller.cartItems.length} items',
-                                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                          color: Theme.of(context).colorScheme.onPrimary,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                ),
-                              ],
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          
-                          // Enhanced checkout button
-                          ThemeAwareButton(
-                            text: 'Proceed to Payment',
-                            icon: Iconsax.card,
-                            variant: ButtonVariant.primary,
-                            size: ButtonSize.medium,
-                            fullWidth: true,
-                            onPressed: () => _navigateToAddressSelection(controller),
-                          ),
-                          const SizedBox(height: 8),
                         ],
                       ),
                     ),
-                  ),
-                )
+                  )
                 : null,
         body: controller.isLoading.value
             ? ListView.builder(
@@ -215,83 +146,46 @@ class _CartScreenState extends State<CartScreen> with WidgetsBindingObserver {
             : controller.cartItems.isNotEmpty
                 ? CustomScrollView(
                     slivers: [
-                      // Modern Header
+                      // Simple Header - White minimal
                       SliverAppBar(
-                        pinned: false,
-                        floating: true,
-                        snap: true,
-                        backgroundColor: Theme.of(context).colorScheme.surface,
+                        pinned: true,
+                        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                         elevation: 0,
-                        automaticallyImplyLeading: false,
-                        expandedHeight: 100,
+                        leading: IconButton(
+                          icon: Icon(Iconsax.arrow_left, color: Theme.of(context).colorScheme.onSurface),
+                          onPressed: () => Get.back(),
+                        ),
+                        expandedHeight: 140,
                         flexibleSpace: FlexibleSpaceBar(
                           background: Container(
                             padding: EdgeInsets.fromLTRB(
-                              20,
-                              MediaQuery.of(context).padding.top + 16,
-                              20,
-                              16,
+                              DesignSystem.spacing.lg,
+                              MediaQuery.of(context).padding.top + 40,
+                              DesignSystem.spacing.lg,
+                              DesignSystem.spacing.md,
                             ),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
-                                  Theme.of(context).colorScheme.secondary.withValues(alpha: 0.02),
-                                ],
-                              ),
-                            ),
+                            color: Theme.of(context).scaffoldBackgroundColor,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "My Cart",
-                                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: -0.5,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(12),
-                                            border: Border.all(
-                                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Iconsax.shopping_bag,
-                                                size: 14,
-                                                color: Theme.of(context).colorScheme.primary,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                '${controller.cartItems.length} ${controller.cartItems.length == 1 ? 'item' : 'items'}',
-                                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                                  color: Theme.of(context).colorScheme.primary,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                                Text(
+                                  "My Cart",
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                    letterSpacing: -0.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${controller.cartItems.length} ${controller.cartItems.length == 1 ? 'item' : 'items'}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
                                 ),
                               ],
                             ),
@@ -302,7 +196,12 @@ class _CartScreenState extends State<CartScreen> with WidgetsBindingObserver {
                       // Delivery Address Section
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                          padding: EdgeInsets.fromLTRB(
+                            DesignSystem.spacing.lg,
+                            DesignSystem.spacing.md,
+                            DesignSystem.spacing.lg,
+                            0,
+                          ),
                           child: _buildDeliveryAddressSection(context),
                         ),
                       ),
@@ -310,13 +209,13 @@ class _CartScreenState extends State<CartScreen> with WidgetsBindingObserver {
                       // Dynamic spacing based on whether address exists
                       SliverToBoxAdapter(
                         child: SizedBox(
-                          height: _currentUser?.addresses.isEmpty == true ? 0 : 20,
+                          height: _currentUser?.addresses.isEmpty == true ? 0 : DesignSystem.spacing.lg,
                         ),
                       ),
 
-                      // Cart items
+                      // Cart items with minimal design
                       SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        padding: EdgeInsets.symmetric(horizontal: DesignSystem.spacing.lg),
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
@@ -330,7 +229,7 @@ class _CartScreenState extends State<CartScreen> with WidgetsBindingObserver {
                                   index: index,
                                   child: Padding(
                                     padding: EdgeInsets.only(
-                                      bottom: isLast ? 0 : 12,
+                                      bottom: isLast ? 0 : DesignSystem.spacing.md,
                                     ),
                                     child: const ModernOrderItemSkeleton(),
                                   ),
@@ -341,11 +240,12 @@ class _CartScreenState extends State<CartScreen> with WidgetsBindingObserver {
                                 index: index,
                                 child: Padding(
                                   padding: EdgeInsets.only(
-                                    bottom: isLast ? 0 : 12,
+                                    bottom: isLast ? 0 : DesignSystem.spacing.md,
                                   ),
                                   child: CartProduct(
-                                    key: ValueKey(product.id),
+                                    key: ValueKey(cartItem.productId), // Use SKU ID as key
                                     product: product,
+                                    skuId: cartItem.productId, // Pass SKU ID
                                     quantity: cartItem.quantity,
                                     isLastInList: isLast,
                                     selectedColor: cartItem.selectedColor,
@@ -358,22 +258,25 @@ class _CartScreenState extends State<CartScreen> with WidgetsBindingObserver {
                         ),
                       ),
 
-                      const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                      SliverToBoxAdapter(child: SizedBox(height: DesignSystem.spacing.lg)),
                           
-                      // Simple Order Summary (without delivery details)
+                      // Price summary
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          padding: EdgeInsets.symmetric(horizontal: DesignSystem.spacing.lg),
                           child: _buildSimpleOrderSummary(context, controller),
                         ),
                       ),
 
-                      // Add More Items Button
+                      // Add More Items Button - minimal style
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: DesignSystem.spacing.lg,
+                            vertical: DesignSystem.spacing.lg,
+                          ),
                           child: Center(
-                            child: TextButton.icon(
+                            child: TextButton(
                               onPressed: () {
                                 try {
                                   Get.offAndToNamed(Routes.bottomNav, arguments: 'home');
@@ -381,28 +284,27 @@ class _CartScreenState extends State<CartScreen> with WidgetsBindingObserver {
                                   Get.back();
                                 }
                               },
-                              icon: Icon(
-                                Iconsax.add_circle,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                              label: Text(
-                                'Add More Items',
-                                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: DesignSystem.spacing.lg,
+                                  vertical: DesignSystem.spacing.md,
+                                ),
+                                backgroundColor: Colors.transparent,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  side: BorderSide(
+                                    color: Color(0xFFD0D0D2),
+                                    width: 1,
+                                  ),
                                 ),
                               ),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                                backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  side: BorderSide(
-                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
-                                    width: 1.5,
-                                  ),
+                              child: Text(
+                                'Add more items',
+                                style: TextStyle(
+                                  color: Color(0xFF737378),
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: 0.1,
                                 ),
                               ),
                             ),
@@ -411,66 +313,73 @@ class _CartScreenState extends State<CartScreen> with WidgetsBindingObserver {
                       ),
                           
                       // Bottom spacing for floating button
-                      const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                      SliverToBoxAdapter(child: SizedBox(height: 120)),
                     ],
                   )
                 : Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(24),
+                      padding: EdgeInsets.all(DesignSystem.spacing.lg),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Enhanced empty state illustration
-                          Container(
-                            padding: const EdgeInsets.all(32),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Iconsax.shopping_cart,
-                              size: 80,
-                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
-                            ),
+                          // Empty state icon - minimal
+                          Icon(
+                            Iconsax.shopping_cart,
+                            size: 64,
+                            color: Color(0xFFD0D0D2),
                           ),
-                          const SizedBox(height: 32),
+                          SizedBox(height: DesignSystem.spacing.lg),
+                          
                           Text(
                             'Your cart is empty',
-                            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface,
-                              fontWeight: FontWeight.bold,
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF16161E),
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: DesignSystem.spacing.md),
+                          
                           Text(
-                            'Looks like you haven\'t added any stationery items yet.\nStart exploring our amazing collection!',
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            'Add items to your cart to get started.',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w400,
+                              color: Color(0xFF737378),
                               height: 1.5,
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 40),
+                          SizedBox(height: DesignSystem.spacing.xl),
                           
-                          // Single action button
+                          // Simple CTA
                           SizedBox(
-                            width: double.infinity,
-                            child: ThemeAwareButton(
-                              text: 'Start Shopping',
-                              icon: Iconsax.bag_2,
-                              variant: ButtonVariant.primary,
-                              size: ButtonSize.large,
-                              fullWidth: true,
-                              onPressed: () {
-                                // Navigate to home tab
-                                try {
-                                  Get.offAndToNamed(Routes.bottomNav, arguments: 'home');
-                                } catch (e) {
-                                  // Fallback to simple back navigation
-                                  Get.back();
-                                }
-                              },
+                            width: 240,
+                            height: 56,
+                            child: Material(
+                              color: Color(0xFF6B8FA3), // Muted blue-gray from reference
+                              borderRadius: BorderRadius.circular(14),
+                              child: InkWell(
+                                onTap: () {
+                                  try {
+                                    Get.offAndToNamed(Routes.bottomNav, arguments: 'home');
+                                  } catch (e) {
+                                    Get.back();
+                                  }
+                                },
+                                borderRadius: BorderRadius.circular(14),
+                                child: Center(
+                                  child: Text(
+                                    'Add more items',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -515,200 +424,147 @@ class _CartScreenState extends State<CartScreen> with WidgetsBindingObserver {
     final appSettings = AppSettingsService.instance;
     final deliveryCharge = appSettings.calculateDeliveryCharge(controller.total.value);
     final finalTotal = controller.total.value + deliveryCharge;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Theme.of(context).colorScheme.surface,
-            Theme.of(context).colorScheme.surface,
-          ],
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.colorScheme.outline,
+          width: 1,
         ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-            spreadRadius: 0,
-          ),
-        ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
-              width: 1,
+      padding: EdgeInsets.all(DesignSystem.spacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title
+          Text(
+            'Price Summary',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
             ),
-            borderRadius: BorderRadius.circular(20),
           ),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          
+          SizedBox(height: DesignSystem.spacing.lg),
+          
+          // Subtotal
+          _buildSummaryRow(
+            context,
+            'Subtotal (${controller.cartItems.length} ${controller.cartItems.length == 1 ? 'item' : 'items'})',
+            '₹${controller.total.value.toStringAsFixed(0)}',
+          ),
+          
+          SizedBox(height: DesignSystem.spacing.md),
+          
+          // Divider - thin
+          Divider(
+            color: theme.colorScheme.outline,
+            thickness: 1,
+            height: 0,
+          ),
+          
+          SizedBox(height: DesignSystem.spacing.md),
+          
+          // Delivery Fee
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Header with icon
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Iconsax.receipt_2,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Order Summary',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                ],
+              Text(
+                'Delivery',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
-              
-              const SizedBox(height: 20),
-              
-              // Items count and subtotal
-              _buildSummaryRow(
-                context,
-                'Subtotal (${controller.cartItems.length} ${controller.cartItems.length == 1 ? 'item' : 'items'})',
-                '₹${controller.total.value.toStringAsFixed(0)}',
-                false,
-              ),
-              
-              const SizedBox(height: 12),
-              
-              // Delivery Fee with badge
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Delivery Fee',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+              if (deliveryCharge == 0)
+                Text(
+                  'FREE',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.primary,
                   ),
-                  if (deliveryCharge == 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF10B981), Color(0xFF06B6D4)],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'FREE',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 11,
-                        ),
-                      ),
-                    )
-                  else
-                    Text(
-                      '₹${deliveryCharge.toStringAsFixed(0)}',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                ],
-              ),
-              
-              const SizedBox(height: 16),
-              Divider(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2)),
-              const SizedBox(height: 16),
-              
-              // Final total with gradient background
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                      Theme.of(context).colorScheme.secondary.withValues(alpha: 0.05),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                    width: 1.5,
+                )
+              else
+                Text(
+                  '₹${deliveryCharge.toStringAsFixed(0)}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Total Amount',
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '₹${finalTotal.toStringAsFixed(0)}',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: Theme.of(context).colorScheme.primary,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Iconsax.arrow_right_3,
-                        color: Theme.of(context).colorScheme.onPrimary,
-                        size: 20,
-                      ),
-                    ),
-                  ],
+            ],
+          ),
+          
+          SizedBox(height: DesignSystem.spacing.md),
+          
+          // Divider - thin
+          Divider(
+            color: theme.colorScheme.outline,
+            thickness: 1,
+            height: 0,
+          ),
+          
+          SizedBox(height: DesignSystem.spacing.md),
+          
+          // Total - slightly emphasized with gradient price
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Total',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              ShaderMask(
+                shaderCallback: (bounds) =>
+                    ComponentStyles.getPriceGradient(isDark).createShader(bounds),
+                child: Text(
+                  '₹${finalTotal.toStringAsFixed(0)}',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurface,
+                    letterSpacing: -0.3,
+                  ),
                 ),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildSummaryRow(BuildContext context, String label, String value, bool isBold) {
+  Widget _buildSummaryRow(BuildContext context, String label, String value) {
+    final theme = Theme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
         Text(
           value,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            fontWeight: FontWeight.w600,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: theme.colorScheme.onSurface,
           ),
         ),
       ],
@@ -719,7 +575,7 @@ class _CartScreenState extends State<CartScreen> with WidgetsBindingObserver {
     if (_currentUser == null) {
       return Container(
         height: 80,
-        margin: const EdgeInsets.only(bottom: 16),
+        margin: EdgeInsets.only(bottom: DesignSystem.spacing.md),
         child: const ModernSkeleton(height: 80, width: double.infinity),
       );
     }
@@ -730,131 +586,91 @@ class _CartScreenState extends State<CartScreen> with WidgetsBindingObserver {
     }
 
     final defaultAddress = _currentUser!.addresses.where((addr) => addr.isDefault).firstOrNull;
+    final theme = Theme.of(context);
 
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Theme.of(context).colorScheme.surface,
-                Theme.of(context).colorScheme.surface,
-              ],
-            ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-                spreadRadius: 0,
-              ),
-            ],
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
-              width: 1,
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.colorScheme.outline,
+          width: 1,
+        ),
+      ),
+      padding: EdgeInsets.all(DesignSystem.spacing.md),
+      child: Row(
+        children: [
+          // Location icon
+          Icon(
+            Iconsax.location5,
+            color: theme.colorScheme.primary,
+            size: 20,
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  // Location icon with gradient background
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-                          Theme.of(context).colorScheme.secondary.withValues(alpha: 0.08),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Iconsax.location5,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
-                    ),
+          SizedBox(width: DesignSystem.spacing.md),
+          
+          // Address info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Deliver to',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
-                  const SizedBox(width: 12),
-                  // Deliver to text with address
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Deliver to',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        if (defaultAddress != null) ...[
-                          Text(
-                            '${defaultAddress.label}, ${defaultAddress.pincode}',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${defaultAddress.line1}${defaultAddress.line2.isNotEmpty ? ', ${defaultAddress.line2}' : ''}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ] else ...[
-                          Text(
-                            'No address selected',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                          ),
-                        ],
-                      ],
+                ),
+                SizedBox(height: 4),
+                if (defaultAddress != null) ...[
+                  Text(
+                    '${defaultAddress.label}, ${defaultAddress.pincode}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: theme.colorScheme.onSurface,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(width: 8),
-                  // Change button with modern design
-                  InkWell(
-                    onTap: () => _showAddressSelectionBottomSheet(context),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                          width: 1,
-                        ),
-                      ),
-                      child: Text(
-                        'Change',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                ] else ...[
+                  Text(
+                    'No address selected',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: theme.colorScheme.error,
                     ),
                   ),
                 ],
+              ],
+            ),
+          ),
+          
+          SizedBox(width: DesignSystem.spacing.md),
+          
+          // Change button
+          TextButton(
+            onPressed: () => _showAddressSelectionBottomSheet(context),
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.symmetric(
+                horizontal: DesignSystem.spacing.md,
+                vertical: DesignSystem.spacing.sm,
+              ),
+            ),
+            child: Text(
+              'Change',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: theme.colorScheme.primary,
               ),
             ),
           ),
-        );
+        ],
+      ),
+    );
   }
 
   void _showAddressSelectionBottomSheet(BuildContext context) {

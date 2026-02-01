@@ -349,9 +349,7 @@ class _OptimizedCategoryScreenState extends State<OptimizedCategoryScreen> {
                                     width: isSelected ? 52 : 48,
                                     height: isSelected ? 52 : 48,
                                     decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? Colors.white.withValues(alpha: 0.25)
-                                          : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                                      color: Colors.transparent,
                                       borderRadius: BorderRadius.circular(12),
                                       border: isSelected ? Border.all(
                                         color: Colors.white.withValues(alpha: 0.3),
@@ -367,9 +365,12 @@ class _OptimizedCategoryScreenState extends State<OptimizedCategoryScreen> {
                                               fadeInDuration: const Duration(milliseconds: 200),
                                               fadeOutDuration: const Duration(milliseconds: 200),
                                               placeholder: (context, url) => Container(
-                                                color: isSelected
-                                                    ? Colors.white.withValues(alpha: 0.1)
-                                                    : Colors.grey.withValues(alpha: 0.1),
+                                                decoration: BoxDecoration(
+                                                  color: isSelected
+                                                      ? Colors.white.withValues(alpha: 0.1)
+                                                      : Colors.grey.withValues(alpha: 0.1),
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
                                                 child: const Center(
                                                   child: SizedBox(
                                                     width: 16,
@@ -383,26 +384,40 @@ class _OptimizedCategoryScreenState extends State<OptimizedCategoryScreen> {
                                               ),
                                               errorWidget: (context, url, error) {
                                                 print('⚠️ Image load error for ${subCategory.name}: $error');
-                                                return Container(
-                                                  color: isSelected
-                                                      ? Colors.white.withValues(alpha: 0.1)
-                                                      : Colors.grey.withValues(alpha: 0.2),
-                                                  child: const Center(
-                                                    child: Icon(
-                                                      Icons.category_outlined,
-                                                      color: Colors.white70,
-                                                      size: 20,
+                                                return Directionality(
+                                                  textDirection: TextDirection.ltr,
+                                                  child: Container(
+                                                    decoration: BoxDecoration(
+                                                      color: isSelected
+                                                          ? Colors.white.withValues(alpha: 0.1)
+                                                          : Colors.grey.withValues(alpha: 0.2),
+                                                      borderRadius: BorderRadius.circular(12),
+                                                    ),
+                                                    child: const Center(
+                                                      child: Icon(
+                                                        Icons.category_outlined,
+                                                        color: Colors.white70,
+                                                        size: 20,
+                                                      ),
                                                     ),
                                                   ),
                                                 );
                                               },
                                             ),
                                           )
-                                        : const Center(
-                                            child: Icon(
-                                              Icons.category_outlined,
-                                              color: Colors.white70,
-                                              size: 20,
+                                        : Container(
+                                            decoration: BoxDecoration(
+                                              color: isSelected
+                                                  ? Colors.white.withValues(alpha: 0.1)
+                                                  : Colors.grey.withValues(alpha: 0.2),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: const Center(
+                                              child: Icon(
+                                                Icons.category_outlined,
+                                                color: Colors.white70,
+                                                size: 20,
+                                              ),
                                             ),
                                           ),
                                   ),

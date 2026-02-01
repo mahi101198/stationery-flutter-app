@@ -6,10 +6,11 @@ import 'package:rps_stationery/routes/app_pages.dart';
 import 'package:rps_stationery/utils/animations/micro_animations.dart';
 
 import 'components/banner_carousel.dart';
-import 'components/category_cards.dart';
-import 'components/category_home_sections.dart';
+import 'components/home_sections_list.dart';
 import 'controllers/category_controller.dart';
 import 'controllers/home_section_controller.dart';
+import 'controllers/subcategory_filter_controller.dart';
+import 'components/subcategory_filter_row.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,6 +22,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late CategoryController _categoryController;
   late HomeSectionController _homeSectionController;
+  late SubcategoryFilterController _subcategoryFilterController;
   late TextEditingController _searchTextController;
 
   @override
@@ -34,6 +36,9 @@ class _HomeScreenState extends State<HomeScreen> {
     // Use Get.put to ensure controller is created if not already exists
     _homeSectionController = Get.put(HomeSectionController());
     print('🏠 HomeScreen: Home section controller initialized');
+    
+    _subcategoryFilterController = Get.put(SubcategoryFilterController());
+    print('🏷️ HomeScreen: Subcategory filter controller initialized');
     
     _searchTextController = TextEditingController();
     print('⌨️ HomeScreen: Search UI components initialized');
@@ -52,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
     print('🏗️ HomeScreen: Building home screen UI...');
     
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
           // Main content with scroll view
@@ -63,13 +69,14 @@ class _HomeScreenState extends State<HomeScreen> {
             pinned: true,
             snap: false,
             expandedHeight: 120,
-            collapsedHeight: 70, // Reduced to ensure proper collapse detection
+            collapsedHeight: 70,
             backgroundColor: Theme.of(context).colorScheme.surface,
             elevation: 0,
             automaticallyImplyLeading: false,
             flexibleSpace: LayoutBuilder(
               builder: (context, constraints) {
-                final isCollapsed = constraints.biggest.height <= 115;
+                // Check if collapsed based on the actual height
+                final isCollapsed = constraints.biggest.height <= 70 + MediaQuery.of(context).padding.top;
                 
                 return Container(
                   padding: EdgeInsets.fromLTRB(
@@ -196,92 +203,36 @@ class _HomeScreenState extends State<HomeScreen> {
             floating: false,
             snap: false,
             expandedHeight: 0,
-            collapsedHeight: 140, // Further reduced height for better image utilization
-            backgroundColor: Theme.of(context).colorScheme.surface,
+            collapsedHeight: 160, // Adjusted height for better banner display
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             elevation: 0,
             automaticallyImplyLeading: false,
-            flexibleSpace: Container(
-              padding: const EdgeInsets.fromLTRB(20, 2, 20, 2), // Minimized vertical padding
-              child: const Center(
-                child: BannerCarousel(),
-              ),
+            flexibleSpace: LayoutBuilder(
+              builder: (context, constraints) {
+                // Calculate 0.5% margin from screen width
+                final screenWidth = MediaQuery.of(context).size.width;
+                final margin = screenWidth * 0.005; // 0.5% margin
+                
+                return Container(
+                  padding: EdgeInsets.all(margin), // 0.5% margin from all sides
+                  child: const Center(
+                    child: BannerCarousel(),
+                  ),
+                );
+              },
             ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 20)),
 
-          // Categories Section - Minimalist Header
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    "Categories",
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  InkWell(
-                    onTap: () {
-                      Get.toNamed(
-                        Routes.category,
-                        arguments: {'categoryName': 'All Products', 'categoryId': null},
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            "View All",
-                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Iconsax.arrow_right_3,
-                            size: 14,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: MicroAnimations.fadeSlideIn(
-                duration: MicroAnimations.normal,
-                slideOffset: 30.0,
-                child: const CategoryCards(),
-              ),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 32)),
-
-          // Dynamic Category-based Home Sections
+          // Subcategory Filter Row
           const SliverToBoxAdapter(
-            child: CategoryHomeSections(),
+            child: SubcategoryFilterRow(),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 8)),
+
+          // Home Sections (Global, sorted by rank)
+          const SliverToBoxAdapter(
+            child: HomeSectionsList(),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
             ],

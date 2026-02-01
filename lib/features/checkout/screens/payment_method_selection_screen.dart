@@ -62,13 +62,13 @@ class _PaymentMethodSelectionScreenState extends State<PaymentMethodSelectionScr
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomScrollView(
         slivers: [
-          // Modern App Bar
+          // Minimal App Bar - White background
           SliverAppBar(
-            expandedHeight: 120,
+            expandedHeight: 110,
             floating: false,
             pinned: true,
             elevation: 0,
-            backgroundColor: Theme.of(context).colorScheme.surface,
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
             leading: IconButton(
               icon: Icon(Iconsax.arrow_left, color: Theme.of(context).colorScheme.onSurface),
               onPressed: () {
@@ -78,16 +78,7 @@ class _PaymentMethodSelectionScreenState extends State<PaymentMethodSelectionScr
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                      Theme.of(context).colorScheme.secondary.withValues(alpha: 0.05),
-                    ],
-                  ),
-                ),
+                color: Colors.white,
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(
                     DesignSystem.spacing.md,
@@ -104,23 +95,24 @@ class _PaymentMethodSelectionScreenState extends State<PaymentMethodSelectionScr
                           Container(
                             padding: EdgeInsets.all(DesignSystem.spacing.sm),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                              color: const Color(0xFFF3F3F4),
                               borderRadius: DesignSystem.borders.md,
                             ),
-                            child: Icon(
+                            child: const Icon(
                               Iconsax.card,
-                              color: Theme.of(context).colorScheme.primary,
-                              size: 24,
+                              color: Color(0xFF5A7C8A),
+                              size: 20,
                             ),
                           ),
                           SizedBox(width: DesignSystem.spacing.md),
-                          Expanded(
+                          const Expanded(
                             child: Text(
                               'Payment Method',
-                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              style: TextStyle(
+                                fontSize: 20,
                                 fontWeight: FontWeight.w700,
+                                color: Color(0xFF16161E),
                                 letterSpacing: -0.5,
-                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                           ),

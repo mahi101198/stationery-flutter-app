@@ -95,13 +95,41 @@ class SubCategoryProductController extends GetxController {
   /// Filter products by subcategory (from already loaded category products)
   void filterProductsBySubCategory(String subCategoryId) {
     print('📦 SubCategoryProductController: Filtering products by subcategory: $subCategoryId');
+    print('📦 SubCategoryProductController: Total products in category: ${_allCategoryProducts.length}');
     
     _currentSubCategoryId.value = subCategoryId;
     
     // Filter from all category products
+    // Handle both cases: subcategoryId might be the document ID or the actual subcategory name
     final filteredProducts = _allCategoryProducts
-        .where((product) => product.subcategoryId == subCategoryId)
+        .where((product) {
+          final productSubCategory = product.subCategory.toLowerCase().trim();
+          final filterSubCategory = subCategoryId.toLowerCase().trim();
+          
+          // Try exact match first
+          if (productSubCategory == filterSubCategory) {
+            return true;
+          }
+          
+          // If exact match fails, try matching by document ID if it looks like that
+          // (Firestore document IDs are often short lowercase IDs)
+          if (productSubCategory.contains(filterSubCategory) || filterSubCategory.contains(productSubCategory)) {
+            return true;
+          }
+          
+          return false;
+        })
         .toList();
+    
+    print('📦 SubCategoryProductController: Found ${filteredProducts.length} matching products');
+    
+    // Log first few product subcategories for debugging
+    if (_allCategoryProducts.isNotEmpty) {
+      print('📦 SubCategoryProductController: Sample subcategories from products:');
+      _allCategoryProducts.take(3).forEach((p) {
+        print('   - Product: ${p.title}, SubCategory: ${p.subCategory}');
+      });
+    }
     
     _products.assignAll(filteredProducts);
     _resetPagination();

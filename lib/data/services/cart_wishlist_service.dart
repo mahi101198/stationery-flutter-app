@@ -79,23 +79,26 @@ class CartWishlistService extends GetxController {
     required int requestedQuantity,
     required String userId,
     int currentCartQuantity = 0,
+    ProductModel? productContext,
   }) async {
     try {
       // Fetch product details to get maxQuantityPerUser
-      ProductModel? product;
+      ProductModel? product = productContext;
       
-      // Try ProductCacheService first (if available)
-      if (Get.isRegistered<ProductCacheService>()) {
-        try {
-          product = await ProductCacheService.instance.getProductById(productId);
-        } catch (e) {
-          log('⚠️ ProductCacheService failed, falling back to ProductService: $e');
-        }
-      }
-      
-      // Fallback to ProductService if cache failed or not available
       if (product == null) {
-        product = await ProductService.instance.getProductById(productId);
+        // Try ProductCacheService first (if available)
+        if (Get.isRegistered<ProductCacheService>()) {
+          try {
+            product = await ProductCacheService.instance.getProductById(productId);
+          } catch (e) {
+            log('⚠️ ProductCacheService failed, falling back to ProductService: $e');
+          }
+        }
+        
+        // Fallback to ProductService if cache failed or not available
+        if (product == null) {
+          product = await ProductService.instance.getProductById(productId);
+        }
       }
       
       if (product == null) {
@@ -175,10 +178,28 @@ class CartWishlistService extends GetxController {
   /// Create or update cart
   Future<void> saveCart(CartModel cart) async {
     try {
+      print('💾 ════════════════════════════════════════════════════════');
+      print('💾 SAVING CART TO FIRESTORE');
+      print('💾 ════════════════════════════════════════════════════════');
+      print('  User ID: ${cart.userId}');
+      print('  Items count: ${cart.items.length}');
+      for (var item in cart.items) {
+        print('    - ${item.productId} x ${item.quantity}');
+      }
+      print('  Collection: carts');
+      print('  Document ID: ${cart.userId}');
+      
       final updatedCart = cart.copyWith(updatedAt: DateTime.now());
       await _cartsCollection.doc(cart.userId).set(updatedCart.toFirestore());
+      
+      print('✅ Cart saved successfully to Firestore');
+      print('💾 ════════════════════════════════════════════════════════');
       log('✅ Cart saved successfully for user: ${cart.userId}');
     } catch (e) {
+      print('❌ ════════════════════════════════════════════════════════');
+      print('❌ ERROR SAVING CART');
+      print('❌ Error: $e');
+      print('❌ ════════════════════════════════════════════════════════');
       log('❌ Error saving cart: $e');
       throw 'Failed to save cart. Please try again.';
     }
@@ -190,10 +211,19 @@ class CartWishlistService extends GetxController {
     required String productId,
     int quantity = 1,
     String? selectedColor,
+    ProductModel? productContext,
   }) async {
+    print('📦 ════════════════════════════════════════════════════════');
+    print('📦 CART SERVICE - ADD TO CART');
+    print('📦 ════════════════════════════════════════════════════════');
+    print('  Product ID: $productId');
+    print('  Quantity: $quantity');
+    
     try {
       final cart = await getCart(userId);
       final now = DateTime.now();
+      
+      print('  Cart fetched: ${cart != null ? "Found (${cart.items.length} items)" : "Null (New Cart)"}');
 
       // Get current quantity in cart for this product
       int currentCartQuantity = 0;
@@ -203,20 +233,27 @@ class CartWishlistService extends GetxController {
         );
         currentCartQuantity = existingItem?.quantity ?? 0;
       }
+      
+      print('  Current quantity in cart: $currentCartQuantity');
 
       // Validate quantity limits before proceeding
+      print('🔄 Validating quantity limits...');
       final validationResult = await _validateQuantityLimits(
         productId: productId,
         requestedQuantity: quantity,
         userId: userId,
         currentCartQuantity: currentCartQuantity,
+        productContext: productContext,
       );
 
       // Handle validation result silently - no user notifications in production
       if (!validationResult.isValid) {
+        print('❌ Validation failed: ${validationResult.errorMessage}');
         log('⚠️ Add to cart validation failed: ${validationResult.errorMessage}');
         return; // Silently return without showing error to user
       }
+      
+      print('✅ Validation passed');
 
       List<CartItem> updatedItems;
       
@@ -230,6 +267,7 @@ class CartWishlistService extends GetxController {
             selectedColor: selectedColor,
           ),
         ];
+        print('➕ Creating new cart with 1 item');
       } else {
         // Update existing cart
         updatedItems = List.from(cart.items);
@@ -246,6 +284,7 @@ class CartWishlistService extends GetxController {
                 quantity: updatedItems[existingItemIndex].quantity + quantity,
                 selectedColor: selectedColor,
               );
+          print('🔄 Updated existing item quantity');
         } else {
           // Add new item
           updatedItems.add(
@@ -256,6 +295,7 @@ class CartWishlistService extends GetxController {
               selectedColor: selectedColor,
             ),
           );
+          print('➕ Added new item to existing cart');
         }
       }
 
@@ -265,9 +305,12 @@ class CartWishlistService extends GetxController {
         updatedAt: now,
       );
 
+      print('🔄 calling saveCart()...');
       await saveCart(updatedCart);
       log('✅ Item added to cart: $productId x$quantity');
+      print('📦 CART SERVICE - SUCCESS');
     } catch (e) {
+      print('❌ ERROR in CartService.addToCart: $e');
       log('❌ Error adding to cart: $e');
       throw 'Failed to add item to cart. ${e.toString()}';
     }
@@ -278,6 +321,7 @@ class CartWishlistService extends GetxController {
     required String userId,
     required String productId,
     required int quantity,
+    ProductModel? productContext,
   }) async {
     try {
       final cart = await getCart(userId);
@@ -295,6 +339,7 @@ class CartWishlistService extends GetxController {
         requestedQuantity: quantity,
         userId: userId,
         currentCartQuantity: 0, // Set to 0 since we're setting absolute quantity
+        productContext: productContext,
       );
 
       // Handle validation result silently - no user notifications in production

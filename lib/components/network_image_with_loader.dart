@@ -99,26 +99,29 @@ class _NetworkImageWithLoaderState extends State<NetworkImageWithLoader> {
               });
             }
             
-            return Container(
-              color: const Color(0xFFF5F5F5),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    _isRetrying ? Icons.refresh : Icons.image_not_supported,
-                    color: const Color(0xFFBDBDBD),
-                    size: 32,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _isRetrying ? 'Retrying...' : 'Image unavailable',
-                    style: const TextStyle(
-                      color: Color(0xFF757575),
-                      fontSize: 12,
+            return Directionality(
+              textDirection: TextDirection.ltr,
+              child: Container(
+                color: const Color(0xFFF5F5F5),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _isRetrying ? Icons.refresh : Icons.image_not_supported,
+                      color: const Color(0xFFBDBDBD),
+                      size: 32,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    Text(
+                      _isRetrying ? 'Retrying...' : 'Image unavailable',
+                      style: const TextStyle(
+                        color: Color(0xFF757575),
+                        fontSize: 12,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
             );
           },
