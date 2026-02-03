@@ -1104,18 +1104,12 @@ class _CartProductEnhancedState extends State<CartProductEnhanced> {
               _buildCircularButton(
                 context: context,
                 icon: Iconsax.add,
-                onTap: isLimitReached
-                  ? () {
-                      Get.snackbar(
-                        "Limit Reached",
-                        "Maximum $maxLimit allowed per order.",
-                        snackPosition: SnackPosition.TOP,
-                        duration: const Duration(seconds: 2),
-                      );
-                    }
+                onTap: isLimitReached 
+                  ? null  // Disable button completely when limit reached
                   : () => controller.updateCartItemQuantity(
                       widget.cartItem.productId, 
                       currentQuantity + 1,
+                      productContext: product,
                     ),
                 isDisabled: isLimitReached,
                 theme: theme,
@@ -1152,7 +1146,7 @@ class _CartProductEnhancedState extends State<CartProductEnhanced> {
   Widget _buildCircularButton({
     required BuildContext context,
     required IconData icon,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,  // Made nullable to support disabled state
     bool isDisabled = false,
     required ThemeData theme,
   }) {
@@ -1171,7 +1165,7 @@ class _CartProductEnhancedState extends State<CartProductEnhanced> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: onTap,  // Will be null when disabled
         borderRadius: BorderRadius.circular(16),
         child: Container(
           width: 32,
