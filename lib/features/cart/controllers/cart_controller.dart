@@ -329,7 +329,8 @@ class CartController extends GetxController {
       }
       
       // Get product details for validation
-      final product = productContext ?? cartProducts.firstWhereOrNull((p) => p.productId == productId);
+      // NOTE: productId parameter actually contains SKU ID, not product ID
+      final product = productContext ?? getProductForCartItem(productId);
       
       // Only validate if product is found and quantity > 0
       if (product != null && quantity > 0) {

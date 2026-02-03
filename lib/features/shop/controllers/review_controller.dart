@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:rps_stationery/data/repositories/review_repository.dart';
-import 'package:rps_stationery/utils/loaders/full_screen_loader.dart';
+import 'package:rps_stationery/utils/popups/full_screen_loader.dart';
 import 'package:rps_stationery/utils/popups/loaders.dart';
 
 class ReviewController extends GetxController {
@@ -108,7 +108,7 @@ class ReviewController extends GetxController {
         return;
       }
 
-      TFullScreenLoader.openLoadingDialog('Submitting your review...');
+      FullScreenLoader.openLoadingDialog('Submitting your review...');
 
       // Upload new images if any
       List<String> allImageUrls = [...reviewImageUrls];
@@ -165,7 +165,7 @@ class ReviewController extends GetxController {
         message: e.toString(),
       );
     } finally {
-      TFullScreenLoader.stopLoading();
+      FullScreenLoader.stopLoading();
     }
   }
 
@@ -195,7 +195,7 @@ class ReviewController extends GetxController {
 
       if (confirm != true) return;
 
-      TFullScreenLoader.openLoadingDialog('Deleting review...');
+      FullScreenLoader.openLoadingDialog('Deleting review...');
 
       await reviewRepository.deleteReview(productId);
 
@@ -219,7 +219,7 @@ class ReviewController extends GetxController {
         message: e.toString(),
       );
     } finally {
-      TFullScreenLoader.stopLoading();
+      FullScreenLoader.stopLoading();
     }
   }
 

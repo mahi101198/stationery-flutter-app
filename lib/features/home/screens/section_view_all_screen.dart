@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:rps_stationery/components/home/section_item_card.dart';
-import 'package:rps_stationery/components/skleton/product/product_card_skelton.dart';
+import 'package:rps_stationery/components/skleton/product_card_skeleton.dart';
 import 'package:rps_stationery/features/home/controllers/home_section_controller.dart';
 import 'package:rps_stationery/routes/app_pages.dart';
 
@@ -112,7 +112,7 @@ class _SectionViewAllScreenState extends State<SectionViewAllScreen> {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: 6,
             itemBuilder: (context, index) {
-              return ProductCardSkelton(
+              return ProductCardSkeleton(
                 height: 240,
               );
             },
@@ -176,7 +176,7 @@ class _SectionViewAllScreenState extends State<SectionViewAllScreen> {
       itemBuilder: (context, index) {
         // Show loading skeletons at the end
         if (index >= items.length) {
-          return ProductCardSkelton(height: 240);
+          return ProductCardSkeleton(height: 240);
         }
 
         final product = items[index];

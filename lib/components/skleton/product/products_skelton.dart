@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../constants.dart';
-import 'product_card_skelton.dart';
+import '../product_card_skeleton.dart';
 
 class ProductsSkelton extends StatelessWidget {
   const ProductsSkelton({
@@ -20,7 +20,7 @@ class ProductsSkelton extends StatelessWidget {
             left: defaultPadding,
             right: index == 2 ? defaultPadding : 0,
           ),
-          child: const ProductCardSkelton(),
+          child: const ProductCardSkeleton(),
         ),
       ),
     );

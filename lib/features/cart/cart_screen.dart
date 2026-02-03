@@ -5,7 +5,7 @@ import 'package:rps_stationery/components/ui/modern_ui.dart';
 import 'package:rps_stationery/components/ui/theme_aware_components.dart';
 import 'package:rps_stationery/features/cart/controllers/cart_controller.dart';
 import 'package:rps_stationery/utils/animations/micro_animations.dart';
-import 'package:rps_stationery/features/cart/widgets/cart_product.dart';
+
 import 'package:rps_stationery/routes/app_pages.dart';
 import 'package:rps_stationery/utils/theme/design_system.dart';
 import 'package:rps_stationery/services/app_settings_service.dart';
@@ -223,40 +223,6 @@ class _CartScreenState extends State<CartScreen> with WidgetsBindingObserver {
                             (context, index) {
                               final cartItem = controller.cartItems[index];
                               final isLast = index == controller.cartItems.length - 1;
-                              
-                              // Check if cart item has enhanced data (price > 0)
-                              if (cartItem.price <= 0) {
-                                // Fallback to product lookup for legacy cart items
-                                final product = controller.getProductForCartItem(cartItem.productId);
-                                if (product == null) {
-                                  return MicroAnimations.staggeredListItem(
-                                    index: index,
-                                    child: Padding(
-                                      padding: EdgeInsets.only(
-                                        bottom: isLast ? 0 : DesignSystem.spacing.md,
-                                      ),
-                                      child: const ModernOrderItemSkeleton(),
-                                    ),
-                                  );
-                                }
-                                
-                                return MicroAnimations.staggeredListItem(
-                                  index: index,
-                                  child: Padding(
-                                    padding: EdgeInsets.only(
-                                      bottom: isLast ? 0 : DesignSystem.spacing.md,
-                                    ),
-                                    child: CartProduct(
-                                      key: ValueKey(cartItem.skuId),
-                                      product: product,
-                                      skuId: cartItem.skuId,
-                                      quantity: cartItem.quantity,
-                                      isLastInList: isLast,
-                                      selectedColor: cartItem.selectedColor,
-                                    ),
-                                  ),
-                                );
-                              }
                               
                               // Use enhanced cart data directly
                               return MicroAnimations.staggeredListItem(
@@ -1078,6 +1044,14 @@ class _CartProductEnhancedState extends State<CartProductEnhanced> {
       );
       final currentQuantity = cartItem?.quantity ?? widget.cartItem.quantity;
       final totalPrice = widget.cartItem.price * currentQuantity;
+      
+      // Find the product and SKU to check purchase limits
+      final product = controller.getProductForCartItem(widget.cartItem.productId);
+      final sku = product?.productSkus.firstWhereOrNull(
+        (s) => s.skuId == widget.cartItem.productId
+      );
+      final maxLimit = sku?.maxPerOrder ?? 999;
+      final isLimitReached = currentQuantity >= maxLimit;
 
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1126,14 +1100,24 @@ class _CartProductEnhancedState extends State<CartProductEnhanced> {
               
               SizedBox(width: 8),
               
-              // Plus button
+              // Plus button - disabled when limit reached
               _buildCircularButton(
                 context: context,
                 icon: Iconsax.add,
-                onTap: () => controller.updateCartItemQuantity(
-                  widget.cartItem.productId, 
-                  currentQuantity + 1,
-                ),
+                onTap: isLimitReached
+                  ? () {
+                      Get.snackbar(
+                        "Limit Reached",
+                        "Maximum $maxLimit allowed per order.",
+                        snackPosition: SnackPosition.TOP,
+                        duration: const Duration(seconds: 2),
+                      );
+                    }
+                  : () => controller.updateCartItemQuantity(
+                      widget.cartItem.productId, 
+                      currentQuantity + 1,
+                    ),
+                isDisabled: isLimitReached,
                 theme: theme,
               ),
             ],
