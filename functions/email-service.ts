@@ -1,5 +1,6 @@
 import * as nodemailer from 'nodemailer';
 import * as logger from 'firebase-functions/logger';
+import { getFirestore } from 'firebase-admin/firestore';
 
 /**
  * Helper function to validate email addresses
@@ -43,15 +44,32 @@ export async function sendOrderConfirmationEmail(orderData: any, deliveryData: a
             return;
         }
 
+        const db = getFirestore();
         const orderId = orderData.orderId || orderData.id;
+        const userId = orderData.userId;
         const items = orderData.items || [];
         const total = orderData.pricing?.total || orderData.totalOrderValue || 0;
+
+        // Fetch customer email from users collection
+        let customerEmail = null;
+        if (userId) {
+            const userDoc = await db.collection('users').doc(userId).get();
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                customerEmail = userData?.email || null;
+                logger.info(`✅ Customer email fetched from users collection: ${customerEmail}`);
+            } else {
+                logger.warn(`User document not found for userId: ${userId}`);
+            }
+        }
+
+        if (!customerEmail) {
+            logger.warn(`No valid customer email found for order ${orderId}`);
+        }
 
         // Format address
         const address = deliveryData?.address || {};
 
-        // Extract customer email from address or order data
-        const customerEmail = address.email || address.mobileNumber || orderData.customerEmail || null;
         const addressString = `
       ${address.recipientName || 'N/A'}
       ${address.line1 || ''}
@@ -637,18 +655,23 @@ Thank you for your purchase! Your order has been confirmed and will be processed
  * Send order status update email to admin
  * Sends when order status changes to various states
  */
-export async function sendOrderStatusUpdateEmail(orderId: string, orderData: any, previousStatus: string, newStatus: string) {
-    try {
-        const adminEmail = process.env.ADMIN_EMAIL;
-
-        if (!adminEmail) {
-            logger.warn('ADMIN_EMAIL environment variable not set. Skipping email.');
-            return;
+        const db = getFirestore();
+        
+        // Fetch customer email from users collection
+        let customerEmail = null;
+        if (orderData.userId) {
+            const userDoc = await db.collection('users').doc(orderData.userId).get();
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                customerEmail = userData?.email || null;
+                logger.info(`✅ Customer email fetched from users collection: ${customerEmail}`);
+            } else {
+                logger.warn(`User document not found for userId: ${orderData.userId}`);
+            }
         }
 
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-            logger.warn('Email credentials not set. Skipping email.');
-            return;
+        if (!customerEmail) {
+            logger.warn(`No valid customer email found for order ${orderId}`);
         }
 
         // Status emojis and descriptions
@@ -910,7 +933,39 @@ Update: ${config.description}
         };
 
         const info = await transporter.sendMail(mailOptions);
-        logger.info(`📧 Order status update email sent: ${info.messageId}`);
+        logger.info(`📧 Order status update email sent to ADMIN: ${info.messageId}`);
+
+        // Send to Customer if email exists
+        if (customerEmail && isValidEmail(customerEmail)) {
+            const customerMailOptions = {
+                ...mailOptions,
+                to: customerEmail,
+                subject: `${config.emoji} Your Order Status Updated: #${orderId} - ${config.title}`,
+                text: `
+Your Order Status Updated!
+
+Order ID: ${orderId}
+Previous Status: ${previousStatus}
+New Status: ${newStatus}
+Total Amount: ₹${total}
+
+Items:
+${items.map((item: any) => `- ${item.name} x ${item.quantity} (₹${(item.price * item.quantity).toFixed(2)})`).join('\n')}
+
+Update: ${config.description}
+
+Thank you for shopping with us!
+                `,
+            };
+
+            try {
+                const customerInfo = await transporter.sendMail(customerMailOptions);
+                logger.info(`📧 Order status update email sent to CUSTOMER (${customerEmail}): ${customerInfo.messageId}`);
+            } catch (customerError) {
+                logger.error(`⚠️ Error sending status update email to customer (${customerEmail}):`, customerError);
+            }
+        }
+
         return info;
 
     } catch (error) {

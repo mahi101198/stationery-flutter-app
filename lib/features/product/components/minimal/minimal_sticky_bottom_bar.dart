@@ -29,7 +29,8 @@ class MinimalStickyBottomBar extends StatelessWidget {
       
       // Determine button state
       final isCurrentProductInCart = cartQuantity > 0;
-      final showGoToCart = isCurrentProductInCart || hasItemsInCart;
+      // Only show "Go to Cart" if THIS specific product (SKU) is in cart
+      final showGoToCart = isCurrentProductInCart;
       
       // Calculate total price
       final unitPrice = selectedSKU?.price ?? (product.productSkus.isNotEmpty ? product.productSkus.first.price : 0.0);

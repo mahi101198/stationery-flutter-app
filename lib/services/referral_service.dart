@@ -156,25 +156,31 @@ class ReferralService extends GetxService {
   /// Get referral statistics for a user
   Future<Map<String, dynamic>> getReferralStats(String userId) async {
     try {
-      final doc = await _firestore.collection('referrals').doc(userId).get();
+      // Fetch referral stats from referrals collection
+      final referralDoc = await _firestore.collection('referrals').doc(userId).get();
       
-      if (!doc.exists) {
+      // Fetch referralCode from users collection
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      final userData = userDoc.data();
+      final referralCode = userData?['referralCode'] ?? '';
+      
+      if (!referralDoc.exists) {
         return {
           'totalReferrals': 0,
           'totalEarnings': 0.0,
           'pendingEarnings': 0.0,
           'withdrawnEarnings': 0.0,
-          'referralCode': '',
+          'referralCode': referralCode,
         };
       }
 
-      final data = doc.data()!;
+      final data = referralDoc.data()!;
       return {
         'totalReferrals': data['totalReferrals'] ?? 0,
         'totalEarnings': (data['totalEarnings'] ?? 0).toDouble(),
         'pendingEarnings': (data['pendingEarnings'] ?? 0).toDouble(),
         'withdrawnEarnings': (data['withdrawnEarnings'] ?? 0).toDouble(),
-        'referralCode': data['referralCode'] ?? '',
+        'referralCode': referralCode,
       };
     } catch (e) {
       print('Error fetching referral stats: $e');
@@ -236,14 +242,19 @@ class ReferralService extends GetxService {
         .collection('referrals')
         .doc(userId)
         .snapshots()
-        .map((doc) {
+        .asyncMap((doc) async {
+      // Also fetch referralCode from users collection
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      final userData = userDoc.data();
+      final referralCode = userData?['referralCode'] ?? '';
+      
       if (!doc.exists) {
         return {
           'totalReferrals': 0,
           'totalEarnings': 0.0,
           'pendingEarnings': 0.0,
           'withdrawnEarnings': 0.0,
-          'referralCode': '',
+          'referralCode': referralCode,
         };
       }
 
@@ -253,7 +264,7 @@ class ReferralService extends GetxService {
         'totalEarnings': (data['totalEarnings'] ?? 0).toDouble(),
         'pendingEarnings': (data['pendingEarnings'] ?? 0).toDouble(),
         'withdrawnEarnings': (data['withdrawnEarnings'] ?? 0).toDouble(),
-        'referralCode': data['referralCode'] ?? '',
+        'referralCode': referralCode,
       };
     });
   }

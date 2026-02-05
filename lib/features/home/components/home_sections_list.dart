@@ -110,7 +110,7 @@ class _HomeSectionsListState extends State<HomeSectionsList> {
       itemCount: _sectionController.activeSections.length,
       itemBuilder: (context, index) {
         final section = _sectionController.activeSections[index];
-        return _buildSection(context, section);
+        return _buildSection(context, section, index);
       },
     );
   }
@@ -118,6 +118,7 @@ class _HomeSectionsListState extends State<HomeSectionsList> {
   Widget _buildSection(
     BuildContext context,
     HomeSectionModel section,
+    int index,
   ) {
     // Load items if not already loaded
     if (!_sectionController.isSectionLoaded(section.sectionId)) {
@@ -150,14 +151,17 @@ class _HomeSectionsListState extends State<HomeSectionsList> {
       }
 
       return Container(
-        margin: const EdgeInsets.only(bottom: 24),
+        margin: EdgeInsets.only(
+          top: index == 0 ? 0 : 0,
+          bottom: 24,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Section header
             _buildSectionHeader(context, section),
             
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             
             // Section items with shimmer skeleton
             if (isLoading)
@@ -235,7 +239,7 @@ class _HomeSectionsListState extends State<HomeSectionsList> {
     final cardWidth = (screenWidth - 48) / 3.1;
     
     return SizedBox(
-      height: 240,
+      height: 190,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -265,7 +269,7 @@ class _HomeSectionsListState extends State<HomeSectionsList> {
     final cardWidth = (screenWidth - 48) / 3.1;
     
     return SizedBox(
-      height: 240,
+      height: 190,
       child: Obx(() {
         // Get updated items
         final filteredItems = _sectionController.getFilteredSectionItemsWithPagination(
@@ -328,7 +332,7 @@ class _HomeSectionsListState extends State<HomeSectionsList> {
     final cardWidth = (screenWidth - 48) / 3.1;
     
     return SizedBox(
-      height: 240,
+      height: 190,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -337,7 +341,7 @@ class _HomeSectionsListState extends State<HomeSectionsList> {
         itemBuilder: (context, index) {
           return ProductCardSkeleton(
             width: cardWidth,
-            height: 240,
+            height: 190,
           );
         },
       ),

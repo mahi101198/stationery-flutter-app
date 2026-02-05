@@ -315,26 +315,26 @@ class _OptimizedCategoryScreenState extends State<OptimizedCategoryScreen> {
                         child: InkWell(
                           onTap: () => _onCategorySelected(subCategory.categoryId, subCategory.id),
                           borderRadius: BorderRadius.circular(12),
+                          splashColor: Colors.transparent,
+                          highlightColor: Colors.transparent,
+                          hoverColor: Colors.transparent,
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
-                            decoration: BoxDecoration(
-                              gradient: isSelected
-                                  ? LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: gradientColors,
-                                    )
-                                  : null,
-                              color: isSelected ? null : Colors.transparent,
+                            decoration: isSelected ? BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: gradientColors,
+                              ),
                               borderRadius: BorderRadius.circular(12),
-                              boxShadow: isSelected ? [
+                              boxShadow: [
                                 BoxShadow(
                                   color: gradientColors[0].withValues(alpha: 0.3),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
-                              ] : [],
-                            ),
+                              ],
+                            ) : null,
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 6,
@@ -344,18 +344,9 @@ class _OptimizedCategoryScreenState extends State<OptimizedCategoryScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   // Category icon with modern design
-                                  AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
+                                  SizedBox(
                                     width: isSelected ? 52 : 48,
                                     height: isSelected ? 52 : 48,
-                                    decoration: BoxDecoration(
-                                      color: Colors.transparent,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: isSelected ? Border.all(
-                                        color: Colors.white.withValues(alpha: 0.3),
-                                        width: 1.5,
-                                      ) : null,
-                                    ),
                                     child: subCategory.image.isNotEmpty
                                         ? ClipRRect(
                                             borderRadius: BorderRadius.circular(12),
@@ -364,34 +355,14 @@ class _OptimizedCategoryScreenState extends State<OptimizedCategoryScreen> {
                                               fit: BoxFit.cover,
                                               fadeInDuration: const Duration(milliseconds: 200),
                                               fadeOutDuration: const Duration(milliseconds: 200),
-                                              placeholder: (context, url) => Container(
-                                                decoration: BoxDecoration(
-                                                  color: isSelected
-                                                      ? Colors.white.withValues(alpha: 0.1)
-                                                      : Colors.grey.withValues(alpha: 0.1),
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
-                                                child: Center(
-                                                  child: SizedBox(
-                                                    width: 16,
-                                                    height: 16,
-                                                    child: CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
+                                              placeholder: (context, url) => const SizedBox.shrink(),
                                               errorWidget: (context, url, error) {
                                                 print('⚠️ Image load error for ${subCategory.name}: $error');
-                                                return Directionality(
-                                                  textDirection: TextDirection.ltr,
-                                                  child: Center(
-                                                    child: Icon(
-                                                      Icons.category_outlined,
-                                                      color: isSelected ? Colors.white : Colors.grey[600],
-                                                      size: 20,
-                                                    ),
+                                                return Center(
+                                                  child: Icon(
+                                                    Icons.category_outlined,
+                                                    color: isSelected ? Colors.white : Colors.grey[600],
+                                                    size: 20,
                                                   ),
                                                 );
                                               },

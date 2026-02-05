@@ -292,7 +292,7 @@ class OrderDetailsScreen extends StatelessWidget {
           ...items.map((item) {
             final itemMap = item as Map<String, dynamic>;
             return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: 16),
               child: _buildItemCard(itemMap, context),
             );
           }).toList(),
@@ -307,77 +307,129 @@ class OrderDetailsScreen extends StatelessWidget {
     final price = (item['productCurrentPrice'] ?? item['price'] ?? 0).toDouble();
     final image = item['productImage'] ?? item['image'] ?? '';
     
-    return Row(
-      children: [
-        // Product Image
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
-              width: 1,
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          // Product Image
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                width: 1,
+              ),
             ),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: image.isNotEmpty
-                ? CachedNetworkImage(
-                    imageUrl: image,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    ),
-                    errorWidget: (context, url, error) => Container(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: image.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: image,
+                      fit: BoxFit.cover,
+                      fadeInDuration: const Duration(milliseconds: 200),
+                      placeholder: (context, url) => Container(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        child: Center(
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        child: Icon(
+                          Iconsax.gallery_slash,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          size: 28,
+                        ),
+                      ),
+                    )
+                  : Container(
                       color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       child: Icon(
                         Iconsax.gallery_slash,
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        size: 20,
+                        size: 28,
                       ),
                     ),
-                  )
-                : Container(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    child: Icon(
-                      Iconsax.gallery_slash,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      size: 20,
-                    ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  name,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    height: 1.3,
                   ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                name,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Qty: $quantity',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Iconsax.box,
+                        size: 14,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Qty: $quantity',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  '₹${price.toStringAsFixed(0)} × $quantity',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        Text(
-          '₹${(price * quantity).toStringAsFixed(0)}',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
+          const SizedBox(width: 12),
+          Text(
+            '₹${(price * quantity).toStringAsFixed(0)}',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

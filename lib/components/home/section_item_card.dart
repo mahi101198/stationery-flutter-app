@@ -50,7 +50,7 @@ class SectionItemCard extends StatelessWidget {
             Expanded(
               flex: 4,
               child: Padding(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.max,
@@ -60,11 +60,15 @@ class SectionItemCard extends StatelessWidget {
                     Text(
                       item.name,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        height: 1.2,
                       ),
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    
+                    const SizedBox(height: 2),
                     
                     // Price and MRP
                     _buildPriceRow(context),
@@ -84,12 +88,12 @@ class SectionItemCard extends StatelessWidget {
         // Product image
         ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-          child: AspectRatio(
-            aspectRatio: 1,
           child: _isValidUrl(item.imageUrl)
               ? CachedNetworkImage(
                   imageUrl: item.imageUrl,
                   fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
                   placeholder: (context, url) => Container(
                     color: Colors.grey[200],
                     child: const Center(
@@ -100,7 +104,6 @@ class SectionItemCard extends StatelessWidget {
                 )
               : _buildErrorWidget(),
         ),
-      ),
       
       // Badge (if present)
         if (item.hasBadge)

@@ -127,8 +127,8 @@ class CartController extends GetxController {
         isLoading.value = true;
       }
       
-      // NOTE: productId field now contains SKU IDs (e.g., "NB-BLUE-P1")
-      final skuIds = cartItems.map((item) => item.productId).toList();
+      // IMPORTANT: Use skuId field, not productId (which is the base product ID)
+      final skuIds = cartItems.map((item) => item.skuId ?? item.productId).toList();
       
       // Check if we have all products loaded
       final currentProductIds = cartProducts.map((p) => p.productId).toSet();
@@ -305,7 +305,8 @@ class CartController extends GetxController {
 
   Future<void> updateCartItemQuantity(String productId, int quantity, {ProductModel? productContext}) async {
     // Store original quantity for rollback
-    final originalItem = cartItems.firstWhereOrNull((item) => item.productId == productId);
+    // IMPORTANT: productId parameter actually contains SKU ID when called from ProductDetailController
+    final originalItem = cartItems.firstWhereOrNull((item) => (item.skuId ?? item.productId) == productId);
     final originalQuantity = originalItem?.quantity ?? 0;
     
     print('🔄 ═══════════════════════════════════════════════════════');
@@ -375,7 +376,8 @@ class CartController extends GetxController {
       print('🔄 Marked item as updating');
       
       // Optimistic update: Update the UI immediately before the server responds
-      final itemIndex = cartItems.indexWhere((item) => item.productId == productId);
+      // IMPORTANT: Search by SKU ID to match items correctly
+      final itemIndex = cartItems.indexWhere((item) => (item.skuId ?? item.productId) == productId);
       if (itemIndex != -1) {
         if (quantity <= 0) {
           // Remove item optimistically
@@ -425,7 +427,8 @@ class CartController extends GetxController {
       
       // Rollback optimistic update on error
       if (originalItem != null) {
-        final itemIndex = cartItems.indexWhere((item) => item.productId == productId);
+        // IMPORTANT: Search by SKU ID for rollback
+        final itemIndex = cartItems.indexWhere((item) => (item.skuId ?? item.productId) == productId);
         if (itemIndex != -1) {
           cartItems[itemIndex] = originalItem;
           print('🔄 Rolled back optimistic update to quantity ${originalItem.quantity}');

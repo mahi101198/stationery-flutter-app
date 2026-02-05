@@ -39,6 +39,7 @@ class MinimalReviewCard extends StatelessWidget {
     }
 
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,

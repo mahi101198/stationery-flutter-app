@@ -407,8 +407,9 @@ class CartWishlistService extends GetxController {
         return; // Silently return without showing error to user
       }
 
+      // IMPORTANT: productId parameter may contain SKU ID, so match by skuId first
       final updatedItems = cart.items.map((item) {
-        if (item.productId == productId) {
+        if ((item.skuId ?? item.productId) == productId) {
           return item.copyWith(quantity: quantity);
         }
         return item;
@@ -436,8 +437,9 @@ class CartWishlistService extends GetxController {
       final cart = await getCart(userId);
       if (cart == null) return;
 
+      // IMPORTANT: productId parameter may contain SKU ID, so match by skuId first
       final updatedItems = cart.items
-          .where((item) => item.productId != productId)
+          .where((item) => (item.skuId ?? item.productId) != productId)
           .toList();
 
       if (updatedItems.isEmpty) {

@@ -314,7 +314,7 @@ class ReviewRepository extends GetxController {
   /// Check if user can review a product (must have ordered it)
   Future<bool> canUserReviewProduct(String productId) async {
     return safeCall(() async {
-      // Check if user has ordered this product
+      // Check if user has ordered this product and it's delivered
       final orders = await _db
           .collection('orders')
           .where('userId', isEqualTo: userId)
@@ -329,6 +329,29 @@ class ReviewRepository extends GetxController {
       }
 
       return false;
+    });
+  }
+
+  /// Check if reviews section should be visible for a product
+  /// Shows if product is delivered to the user OR if product has any reviews
+  Future<bool> shouldShowReviewsSection(String productId) async {
+    return safeCall(() async {
+      // Check if user has received this product (delivered)
+      final deliveredOrders = await _db
+          .collection('orders')
+          .where('userId', isEqualTo: userId)
+          .where('orderStatus', isEqualTo: 'delivered')
+          .get();
+
+      for (var order in deliveredOrders.docs) {
+        final items = order.data()['items'] as List;
+        if (items.any((item) => item['productId'] == productId)) {
+          return true;
+        }
+      }
+
+      // Always show reviews section for all users to view existing reviews
+      return true;
     });
   }
 

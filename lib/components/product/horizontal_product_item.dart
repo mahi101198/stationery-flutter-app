@@ -253,19 +253,17 @@ class HorizontalProductItem extends StatelessWidget {
                       Obx(() {
                         final cartController = CartController.instance;
                         final cartItem = cartController.getCartItemByProductId(product.productId);
-                        final isCurrentProductInCart = cartItem != null;
-                        final hasItemsInCart = cartController.cartItems.isNotEmpty;
-                        final showGoToCart = isCurrentProductInCart || hasItemsInCart;
+                        final isInCart = cartItem != null;
                         
                         return SizedBox(
                           width: double.infinity,
                           child: ThemeAwareButton(
-                            text: showGoToCart ? 'Go to Cart' : 'Add to Cart',
-                            variant: showGoToCart ? ButtonVariant.secondary : ButtonVariant.primary,
+                            text: isInCart ? 'Go to Cart' : 'Add to Cart',
+                            variant: isInCart ? ButtonVariant.secondary : ButtonVariant.primary,
                             size: ButtonSize.small,
-                            icon: showGoToCart ? Iconsax.shopping_cart : Iconsax.add,
+                            icon: isInCart ? Iconsax.shopping_cart : Iconsax.add,
                             onPressed: onAddToCart ?? () async {
-                              if (showGoToCart) {
+                              if (isInCart) {
                                 // Go to cart
                                 Get.offNamedUntil(
                                   Routes.bottomNav,
@@ -273,9 +271,13 @@ class HorizontalProductItem extends StatelessWidget {
                                   (route) => route.settings.name == Routes.bottomNav,
                                 );
                               } else {
-                                // Add to cart using CartController
+                                // Add to cart using CartController with full product context
                                 final cartController = CartController.instance;
-                                await cartController.addToCart(product.productId, 1);
+                                await cartController.addToCart(
+                                  product.productId, 
+                                  1,
+                                  productContext: product,
+                                );
                               }
                             },
                           ),

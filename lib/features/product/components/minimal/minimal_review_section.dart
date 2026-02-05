@@ -22,6 +22,11 @@ class MinimalReviewSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final reviewController = Get.find<ReviewController>();
 
+    // If user hasn't received the product, hide entire review section
+    if (!canWriteReview) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
@@ -57,67 +62,34 @@ class MinimalReviewSection extends StatelessWidget {
             return _buildReviewStats(context, averageRating, totalReviews, distribution);
           }),
           
-          const SizedBox(height: 20),
-          
           // Write/Edit Review button
-          if (canWriteReview)
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Get.to(() => ReviewSubmissionScreen(
-                    productId: productId,
-                    orderId: '', // Will be fetched in the screen
-                  ));
-                },
-                icon: Icon(
-                  hasExistingReview ? Iconsax.edit : Iconsax.edit_2,
-                  size: 18,
-                ),
-                label: Text(hasExistingReview ? 'Edit Your Review' : 'Write a Review'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  side: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 1.5,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Get.to(() => ReviewSubmissionScreen(
+                  productId: productId,
+                  orderId: '', // Will be fetched in the screen
+                ));
+              },
+              icon: Icon(
+                hasExistingReview ? Iconsax.edit : Iconsax.edit_2,
+                size: 18,
               ),
-            )
-          else
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+              label: Text(hasExistingReview ? 'Edit Your Review' : 'Write a Review'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 1.5,
                 ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Iconsax.info_circle,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Purchase and receive this product to write a review',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
-          
+          ),
           const SizedBox(height: 20),
           
           // Reviews list
@@ -182,6 +154,7 @@ class MinimalReviewSection extends StatelessWidget {
 
   Widget _buildNoReviewsState(BuildContext context) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
@@ -223,6 +196,7 @@ class MinimalReviewSection extends StatelessWidget {
     Map<String, dynamic> distribution,
   ) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,

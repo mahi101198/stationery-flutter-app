@@ -183,10 +183,10 @@ class _ProductCardState extends State<ProductCard>
                             // Product Details Section
                             Padding(
                               padding: EdgeInsets.fromLTRB(
-                                isVerySmall ? 4 : 8,
-                                isVerySmall ? 3 : 5,
-                                isVerySmall ? 4 : 8,
-                                isVerySmall ? 2 : 3,
+                                isVerySmall ? 4 : 6,
+                                isVerySmall ? 2 : 4,
+                                isVerySmall ? 4 : 6,
+                                isVerySmall ? 2 : 4,
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,7 +194,7 @@ class _ProductCardState extends State<ProductCard>
                                   // Product Name
                                   _buildProductName(theme, isDark, isVerySmall),
 
-                                  SizedBox(height: isVerySmall ? 2 : 3),
+                                  SizedBox(height: isVerySmall ? 1 : 2),
 
                                   // Price Section
                                   _buildPriceSection(theme, isDark, isVerySmall),
@@ -218,7 +218,7 @@ class _ProductCardState extends State<ProductCard>
   Widget _buildProductImage(
       BuildContext context, bool isDark, int? discountPercent, bool isVerySmall, double borderRadius, double actualWidth) {
     final theme = Theme.of(context);
-    final imageHeight = actualWidth * (isVerySmall ? 0.68 : 0.75);
+    final imageHeight = actualWidth * (isVerySmall ? 0.65 : 0.65);
 
     return Stack(
       children: [
@@ -403,16 +403,16 @@ class _ProductCardState extends State<ProductCard>
   Widget _buildProductName(ThemeData theme, bool isDark, bool isVerySmall) {
     return Text(
       widget.product.name,
-      maxLines: isVerySmall ? 1 : 2,
+      maxLines: isVerySmall ? 1 : 1,
       overflow: TextOverflow.ellipsis,
       style: TextStyle(
-        fontSize: isVerySmall ? 9 : (widget.isCompact ? 11 : 11),
+        fontSize: isVerySmall ? 9 : (widget.isCompact ? 10.5 : 10.5),
         fontWeight: FontWeight.w600,
-        height: isVerySmall ? 1.15 : 1.2,
+        height: isVerySmall ? 1.1 : 1.15,
         color: isDark
             ? theme.colorScheme.onSurface.withValues(alpha: 0.95)
             : theme.colorScheme.onSurface,
-        letterSpacing: isVerySmall ? 0.1 : 0.15,
+        letterSpacing: isVerySmall ? 0.1 : 0.1,
       ),
     );
   }

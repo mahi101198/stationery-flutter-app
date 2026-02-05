@@ -109,7 +109,9 @@ class CouponService extends GetxService {
 
       // 5. Check product/category applicability
       if (coupon.applicableProducts.isNotEmpty || coupon.applicableCategories.isNotEmpty) {
-        print('🔍 Checking product/category applicability...');
+        print('🔍 ════════════════════════════════════════════════════════');
+        print('🔍 CHECKING PRODUCT/CATEGORY APPLICABILITY');
+        print('🔍 ════════════════════════════════════════════════════════');
         
         // Get product IDs and category IDs from cart
         final productIds = cartItems.map((item) => item.productId).toList();
@@ -117,10 +119,53 @@ class CouponService extends GetxService {
         // Fetch products to get category IDs
         final categoryIds = await _getCategoryIdsFromProducts(productIds);
         
-        print('  Product IDs: $productIds');
-        print('  Category IDs: $categoryIds');
-        print('  Applicable Products: ${coupon.applicableProducts}');
-        print('  Applicable Categories: ${coupon.applicableCategories}');
+        print('📦 RAW DATA FROM APP SIDE (Cart):');
+        print('   Product IDs (from cart): $productIds');
+        print('   Product IDs (raw): ${productIds.map((id) => '"$id"').join(', ')}');
+        print('   Category IDs (fetched): $categoryIds');
+        print('   Category IDs (raw): ${categoryIds.map((id) => '"$id"').join(', ')}');
+        
+        print('');
+        print('🎟️ RAW DATA FROM DATABASE (Coupon):');
+        print('   Applicable Products: ${coupon.applicableProducts}');
+        print('   Applicable Products (raw): ${coupon.applicableProducts.map((id) => '"$id"').join(', ')}');
+        print('   Applicable Categories: ${coupon.applicableCategories}');
+        print('   Applicable Categories (raw): ${coupon.applicableCategories.map((id) => '"$id"').join(', ')}');
+        
+        print('');
+        print('🔍 COMPARISON CHECK:');
+        // Check each product ID
+        for (final productId in productIds) {
+          final matches = coupon.applicableProducts.where((p) => p == productId).toList();
+          if (matches.isNotEmpty) {
+            print('   ✅ Product "$productId" MATCHES coupon product "${matches.first}"');
+          } else {
+            print('   ❌ Product "$productId" NOT in applicable products');
+            // Check for similar strings
+            for (final applicableProduct in coupon.applicableProducts) {
+              if (applicableProduct.contains(productId) || productId.contains(applicableProduct)) {
+                print('      ⚠️ Similar: "$applicableProduct" (length: ${applicableProduct.length} vs ${productId.length})');
+              }
+            }
+          }
+        }
+        
+        // Check each category ID
+        for (final categoryId in categoryIds) {
+          final matches = coupon.applicableCategories.where((c) => c == categoryId).toList();
+          if (matches.isNotEmpty) {
+            print('   ✅ Category "$categoryId" MATCHES coupon category "${matches.first}"');
+          } else {
+            print('   ❌ Category "$categoryId" NOT in applicable categories');
+            // Check for similar strings
+            for (final applicableCategory in coupon.applicableCategories) {
+              if (applicableCategory.contains(categoryId) || categoryId.contains(applicableCategory)) {
+                print('      ⚠️ Similar: "$applicableCategory" (length: ${applicableCategory.length} vs ${categoryId.length})');
+              }
+            }
+          }
+        }
+        print('🔍 ════════════════════════════════════════════════════════');
 
         final isApplicable = coupon.isApplicableToCart(
           productIds: productIds,
@@ -177,7 +222,10 @@ class CouponService extends GetxService {
     try {
       final categoryIds = <String>{};
       
+      print('🔍 Fetching category IDs for ${productIds.length} products...');
+      
       for (final productId in productIds) {
+        print('  📦 Fetching product: $productId');
         final productDoc = await _firestore
             .collection('product_details')
             .doc(productId)
@@ -185,17 +233,105 @@ class CouponService extends GetxService {
         
         if (productDoc.exists) {
           final data = productDoc.data();
-          if (data != null && data.containsKey('categoryId')) {
-            categoryIds.add(data['categoryId']);
+          print('    ✅ Product found');
+          print('    📋 Available fields: ${data?.keys.toList()}');
+          
+          if (data != null) {
+            String? categoryId;
+            
+            // Check for category_id (underscore) - PRIMARY FIELD NAME IN DB
+            if (data.containsKey('category_id')) {
+              final categoryIdData = data['category_id'];
+              print('    📊 category_id type: ${categoryIdData.runtimeType}');
+              print('    📊 category_id value: $categoryIdData');
+              
+              categoryId = _extractCategoryId(categoryIdData, 'category_id');
+            }
+            // Fallback to categoryId (camelCase) for compatibility
+            else if (data.containsKey('categoryId')) {
+              final categoryIdData = data['categoryId'];
+              print('    📊 categoryId type: ${categoryIdData.runtimeType}');
+              print('    📊 categoryId value: $categoryIdData');
+              
+              categoryId = _extractCategoryId(categoryIdData, 'categoryId');
+            }
+            // Last resort - check for 'category' field
+            else if (data.containsKey('category')) {
+              final categoryData = data['category'];
+              print('    📊 category type: ${categoryData.runtimeType}');
+              print('    📊 category value: $categoryData');
+              
+              categoryId = _extractCategoryId(categoryData, 'category');
+            } else {
+              print('    ❌ No category field found (checked: category_id, categoryId, category)');
+            }
+            
+            if (categoryId != null && categoryId.isNotEmpty) {
+              categoryIds.add(categoryId);
+              print('    ✅ Added category ID: "$categoryId"');
+            } else {
+              print('    ❌ Could not extract valid category ID');
+            }
           }
+        } else {
+          print('    ❌ Product document not found: $productId');
         }
       }
       
+      print('✅ Total category IDs found: ${categoryIds.length}');
+      print('✅ Category IDs: $categoryIds');
       return categoryIds.toList();
-    } catch (e) {
-      print('Error fetching category IDs: $e');
+    } catch (e, stackTrace) {
+      print('❌ Error fetching category IDs: $e');
+      print('   Stack trace: $stackTrace');
       return [];
     }
+  }
+  
+  /// Extract category ID from various data types
+  String? _extractCategoryId(dynamic categoryIdData, String fieldName) {
+    if (categoryIdData is String) {
+      // Direct string
+      print('    ✅ Category ID from $fieldName (String): "$categoryIdData"');
+      return categoryIdData;
+    } else if (categoryIdData is Map) {
+      // Map/Object - try to extract ID
+      print('    ℹ️ $fieldName is a Map with keys: ${categoryIdData.keys.toList()}');
+      
+      // Try common field names
+      if (categoryIdData.containsKey('id')) {
+        final id = categoryIdData['id']?.toString();
+        print('    ✅ Extracted from $fieldName.id: "$id"');
+        return id;
+      } else if (categoryIdData.containsKey('categoryId')) {
+        final id = categoryIdData['categoryId']?.toString();
+        print('    ✅ Extracted from $fieldName.categoryId: "$id"');
+        return id;
+      } else if (categoryIdData.containsKey('category_id')) {
+        final id = categoryIdData['category_id']?.toString();
+        print('    ✅ Extracted from $fieldName.category_id: "$id"');
+        return id;
+      } else if (categoryIdData.containsKey('name')) {
+        final id = categoryIdData['name']?.toString();
+        print('    ✅ Extracted from $fieldName.name: "$id"');
+        return id;
+      } else {
+        // Use the first value in the map
+        final firstValue = categoryIdData.values.firstOrNull;
+        if (firstValue != null) {
+          final id = firstValue.toString();
+          print('    ⚠️ Using first map value from $fieldName: "$id"');
+          return id;
+        }
+      }
+    } else {
+      // Other type - convert to string
+      final id = categoryIdData?.toString();
+      print('    ⚠️ Converted $fieldName to string: "$id"');
+      return id;
+    }
+    
+    return null;
   }
 
   /// Get all active coupons (for displaying available coupons)

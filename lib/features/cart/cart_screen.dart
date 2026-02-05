@@ -1046,12 +1046,25 @@ class _CartProductEnhancedState extends State<CartProductEnhanced> {
       final totalPrice = widget.cartItem.price * currentQuantity;
       
       // Find the product and SKU to check purchase limits
-      final product = controller.getProductForCartItem(widget.cartItem.productId);
+      // IMPORTANT: Use skuId field, not productId (which is the base product ID)
+      final skuId = widget.cartItem.skuId ?? widget.cartItem.productId;
+      final product = controller.getProductForCartItem(skuId);
+      print('🔍 [CartProductEnhanced] SKU ID: $skuId');
+      print('🔍 [CartProductEnhanced] Product found: ${product != null}');
+      
       final sku = product?.productSkus.firstWhereOrNull(
-        (s) => s.skuId == widget.cartItem.productId
+        (s) => s.skuId == skuId
       );
+      print('🔍 [CartProductEnhanced] SKU found: ${sku != null}');
+      print('🔍 [CartProductEnhanced] SKU maxPerOrder: ${sku?.maxPerOrder}');
+      
       final maxLimit = sku?.maxPerOrder ?? 999;
       final isLimitReached = currentQuantity >= maxLimit;
+      
+      print('🔍 [CartProductEnhanced] Current quantity: $currentQuantity');
+      print('🔍 [CartProductEnhanced] Max limit: $maxLimit');
+      print('🔍 [CartProductEnhanced] Is limit reached: $isLimitReached');
+
 
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1066,7 +1079,7 @@ class _CartProductEnhancedState extends State<CartProductEnhanced> {
                 context: context,
                 icon: Iconsax.minus,
                 onTap: () => controller.updateCartItemQuantity(
-                  widget.cartItem.productId, 
+                  widget.cartItem.skuId ?? widget.cartItem.productId,  // Use SKU ID
                   currentQuantity - 1,
                 ),
                 theme: theme,
@@ -1107,7 +1120,7 @@ class _CartProductEnhancedState extends State<CartProductEnhanced> {
                 onTap: isLimitReached 
                   ? null  // Disable button completely when limit reached
                   : () => controller.updateCartItemQuantity(
-                      widget.cartItem.productId, 
+                      widget.cartItem.skuId ?? widget.cartItem.productId,  // Use SKU ID
                       currentQuantity + 1,
                       productContext: product,
                     ),

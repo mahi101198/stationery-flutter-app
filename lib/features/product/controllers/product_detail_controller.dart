@@ -89,8 +89,9 @@ class ProductDetailController extends GetxController {
       
       // Add null safety check before accessing values
       if (product.value != null && selectedSKU.value != null) {
+        // IMPORTANT: Compare skuId with skuId, not productId with skuId
         final cartItem = cartItems.firstWhereOrNull(
-          (item) => item.productId == selectedSKU.value!.skuId,
+          (item) => (item.skuId ?? item.productId) == selectedSKU.value!.skuId,
         );
         
         // Update cart quantity tracking
@@ -117,6 +118,7 @@ class ProductDetailController extends GetxController {
         }
       }
     });
+
 
     // Listen to wishlist changes to update product's wishlist status
     ever(_cacheService.wishlistIds, (wishlistIds) {
@@ -153,6 +155,9 @@ class ProductDetailController extends GetxController {
       print('   SKUs: ${fetchedProduct.productSkus.length}');
       print('   Variants: ${fetchedProduct.variantAttributes.keys.join(", ")}');
 
+      // Preload carousel images in background
+      _preloadCarouselImages(fetchedProduct);
+
       // Initialize SKU selection
       _initializeSKUSelection();
 
@@ -171,6 +176,35 @@ class ProductDetailController extends GetxController {
       product.value = null;
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  /// Preload carousel images in background
+  void _preloadCarouselImages(ProductModel product) {
+    // Get all image URLs
+    final imageUrls = product.media.allImages;
+    
+    if (imageUrls.isEmpty) {
+      print('⚠️ No images to preload');
+      return;
+    }
+
+    print('📸 Preloading ${imageUrls.length} carousel images in background');
+    
+    // Preload all images in parallel (don't wait for user scroll)
+    for (final imageUrl in imageUrls) {
+      try {
+        precacheImage(
+          NetworkImage(imageUrl),
+          Get.context!,
+        ).then((_) {
+          debugPrint('✅ Image cached: $imageUrl');
+        }).catchError((e) {
+          debugPrint('⚠️ Failed to cache image: $e');
+        });
+      } catch (e) {
+        debugPrint('❌ Preload error: $e');
+      }
     }
   }
 
@@ -265,8 +299,9 @@ class ProductDetailController extends GetxController {
     
     print('🔍 Checking current cart state for SKU: ${selectedSKU.value!.skuId}');
     
+    // IMPORTANT: Compare skuId with skuId, not productId with skuId
     final cartItem = _cartController.cartItems.firstWhereOrNull(
-      (item) => item.productId == selectedSKU.value!.skuId,
+      (item) => (item.skuId ?? item.productId) == selectedSKU.value!.skuId,
     );
     
     if (cartItem != null) {
@@ -319,17 +354,23 @@ class ProductDetailController extends GetxController {
 
   void incrementQuantity() {
     final maxAllowed = _getMaxAllowedQuantity();
+    print('➕ INCREMENT: quantity=${quantity.value}, maxAllowed=$maxAllowed, cartQuantity=${cartQuantity.value}');
+    
     if (quantity.value < maxAllowed) {
       quantity.value++;
+      print('✅ Incremented to ${quantity.value}');
       
       // If item is already in cart, automatically update the cart quantity
       if (selectedSKU.value != null && cartQuantity.value > 0) {
         print('🔄 Auto-updating cart quantity from ${cartQuantity.value} to ${quantity.value}');
+        print('   SKU ID: ${selectedSKU.value!.skuId}');
         _cartController.updateCartItemQuantity(
           selectedSKU.value!.skuId,
           quantity.value,
           productContext: product.value,
         );
+      } else {
+        print('⚠️ NOT updating cart: selectedSKU=${selectedSKU.value != null}, cartQuantity=${cartQuantity.value}');
       }
     } else {
       TLoaders.warningSnackBar(
@@ -340,17 +381,23 @@ class ProductDetailController extends GetxController {
   }
 
   void decrementQuantity() {
+    print('➖ DECREMENT: quantity=${quantity.value}, cartQuantity=${cartQuantity.value}');
+    
     if (quantity.value > 1) {
       quantity.value--;
+      print('✅ Decremented to ${quantity.value}');
       
       // If item is already in cart, automatically update the cart quantity
       if (selectedSKU.value != null && cartQuantity.value > 0) {
         print('🔄 Auto-updating cart quantity from ${cartQuantity.value} to ${quantity.value}');
+        print('   SKU ID: ${selectedSKU.value!.skuId}');
         _cartController.updateCartItemQuantity(
           selectedSKU.value!.skuId,
           quantity.value,
           productContext: product.value,
         );
+      } else {
+        print('⚠️ NOT updating cart: selectedSKU=${selectedSKU.value != null}, cartQuantity=${cartQuantity.value}');
       }
     }
   }

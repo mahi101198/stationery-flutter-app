@@ -43,6 +43,33 @@ class CouponModel {
   /// Create from Firestore document
   factory CouponModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data()!;
+    
+    // Helper to safely convert list items to strings
+    List<String> _parseStringList(dynamic listData) {
+      if (listData == null) return [];
+      if (listData is! List) return [];
+      
+      return listData.map((item) {
+        if (item is String) {
+          return item;
+        } else if (item is Map) {
+          // Try to extract ID from map
+          if (item.containsKey('id')) {
+            return item['id'].toString();
+          } else if (item.containsKey('categoryId')) {
+            return item['categoryId'].toString();
+          } else if (item.containsKey('productId')) {
+            return item['productId'].toString();
+          } else {
+            // Use first value
+            return item.values.first.toString();
+          }
+        } else {
+          return item.toString();
+        }
+      }).toList();
+    }
+    
     return CouponModel(
       couponId: doc.id,
       code: data['code'] ?? '',
@@ -59,8 +86,8 @@ class CouponModel {
       validUntil: _parseTimestamp(data['validUntil']),
       createdAt: _parseTimestamp(data['createdAt']),
       updatedAt: _parseTimestamp(data['updatedAt']),
-      applicableCategories: List<String>.from(data['applicableCategories'] ?? []),
-      applicableProducts: List<String>.from(data['applicableProducts'] ?? []),
+      applicableCategories: _parseStringList(data['applicableCategories']),
+      applicableProducts: _parseStringList(data['applicableProducts']),
     );
   }
 

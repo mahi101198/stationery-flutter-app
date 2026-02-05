@@ -44,7 +44,19 @@ class _BannerCarouselState extends State<BannerCarousel> {
       }
     });
 
-    _startAutoScroll();
+    // Listen to banners changes and start auto-scroll when banners are loaded
+    ever(controller.banners, (_) {
+      print('🔔 BannerCarousel: Banners updated, restarting auto-scroll');
+      _startAutoScroll();
+    });
+
+    // Start auto-scroll after a small delay to ensure everything is initialized
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        print('🚀 BannerCarousel: Starting initial auto-scroll');
+        _startAutoScroll();
+      }
+    });
   }
 
   @override

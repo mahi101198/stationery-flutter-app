@@ -46,7 +46,7 @@ class SubcategoryFilterRow extends StatelessWidget {
   Widget _buildFilterRow(SubcategoryFilterController controller) {
     return Container(
       height: 110, // Increased height for card layout
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.only(top: 12, bottom: 4),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),

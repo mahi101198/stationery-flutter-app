@@ -147,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     const SizedBox(width: 12),
                                     // App Name
                                     Text(
-                                      'RPS STATIONERY',
+                                      'RPS',
                                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                         color: Theme.of(context).colorScheme.onSurface,
                                         fontWeight: FontWeight.bold,
@@ -228,7 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SliverToBoxAdapter(
             child: SubcategoryFilterRow(),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 8)),
+          const SliverToBoxAdapter(child: SizedBox(height: 1)),
 
           // Home Sections (Global, sorted by rank)
           const SliverToBoxAdapter(

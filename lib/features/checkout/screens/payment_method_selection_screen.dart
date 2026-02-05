@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:rps_stationery/features/checkout/controllers/payment_controller.dart';
+import 'package:rps_stationery/features/checkout/components/payment_banner_carousel.dart';
 import 'package:rps_stationery/data/models/cart_model.dart';
 import 'package:rps_stationery/data/models/user_model.dart';
 import 'package:rps_stationery/services/razorpay_payment_service.dart';
@@ -62,9 +63,9 @@ class _PaymentMethodSelectionScreenState extends State<PaymentMethodSelectionScr
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomScrollView(
         slivers: [
-          // Minimal App Bar - White background
+          // Minimal App Bar
           SliverAppBar(
-            expandedHeight: 110,
+            expandedHeight: 80,
             floating: false,
             pinned: true,
             elevation: 0,
@@ -82,13 +83,13 @@ class _PaymentMethodSelectionScreenState extends State<PaymentMethodSelectionScr
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(
                     DesignSystem.spacing.md,
-                    MediaQuery.of(context).padding.top + DesignSystem.spacing.xl,
+                    MediaQuery.of(context).padding.top + DesignSystem.spacing.md,
                     DesignSystem.spacing.md,
                     DesignSystem.spacing.md,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Row(
                         children: [
@@ -105,13 +106,11 @@ class _PaymentMethodSelectionScreenState extends State<PaymentMethodSelectionScr
                             ),
                           ),
                           SizedBox(width: DesignSystem.spacing.md),
-                          const Expanded(
+                          Expanded(
                             child: Text(
-                              'Payment Method',
-                              style: TextStyle(
-                                fontSize: 20,
+                              'Payment',
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF16161E),
                                 letterSpacing: -0.5,
                               ),
                             ),
@@ -125,23 +124,18 @@ class _PaymentMethodSelectionScreenState extends State<PaymentMethodSelectionScr
             ),
           ),
 
-          // Content
+          // Main content with banner carousel and payment info
           SliverPadding(
-            padding: EdgeInsets.all(DesignSystem.spacing.md),
+            padding: EdgeInsets.symmetric(horizontal: DesignSystem.spacing.xs, vertical: DesignSystem.spacing.md),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                // Amount to Pay Card
-                _buildAmountCard(context),
+                // Premium Banner Carousel
+                const PaymentBannerCarousel(),
                 
-                SizedBox(height: DesignSystem.spacing.md),
+                SizedBox(height: DesignSystem.spacing.lg),
                 
-                // Payment Methods
-                _buildModernPaymentMethods(context, controller),
-                
-                SizedBox(height: DesignSystem.spacing.md),
-                
-                // Terms and Conditions
-                _buildModernTermsCard(context),
+                // Payment Method - Single Option: Online
+                _buildOnlinePaymentCard(context, controller),
                 
                 SizedBox(height: DesignSystem.spacing.xl * 2),
               ]),
@@ -149,316 +143,172 @@ class _PaymentMethodSelectionScreenState extends State<PaymentMethodSelectionScr
           ),
         ],
       ),
-      // Modern Payment Button
-      bottomNavigationBar: _buildModernPaymentButton(context, controller),
+      // Modern Price Card at Bottom
+      bottomNavigationBar: _buildPriceCardBottom(context, controller),
     );
   }
 
-
-  Widget _buildAmountCard(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(DesignSystem.spacing.lg),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary,
-        borderRadius: DesignSystem.borders.lg,
-        boxShadow: DesignSystem.shadows.primaryShadow(0.2),
-      ),
-      child: Column(
-        children: [
-          Text(
-            'Total Amount',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.white.withValues(alpha: 0.9),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          SizedBox(height: DesignSystem.spacing.xs),
-          Text(
-            '₹${widget.finalAmount.toStringAsFixed(2)}',
-            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 36,
-              letterSpacing: -1,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildModernPaymentMethods(BuildContext context, PaymentController controller) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: DesignSystem.borders.lg,
-        boxShadow: DesignSystem.shadows.elevation1,
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          // Header
-          Padding(
-            padding: EdgeInsets.all(DesignSystem.spacing.md),
-            child: Row(
-              children: [
-                Text(
-                  'Choose Payment Method',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          // Payment Method Cards
-          Padding(
-            padding: EdgeInsets.all(DesignSystem.spacing.md),
-            child: Obx(() => Column(
-              children: [
-                // Razorpay
-                _buildModernPaymentMethodCard(
-                  context: context,
-                  controller: controller,
-                  methodId: 'razorpay',
-                  title: 'Online Payment',
-                  subtitle: 'UPI, Card, Net Banking & More',
-                  icon: Iconsax.card,
-                  isSelected: controller.selectedPaymentMethod == 'razorpay',
-                ),
-                
-                SizedBox(height: DesignSystem.spacing.md),
-                
-                // COD - Disabled for partial wallet payments
-                // _buildModernPaymentMethodCard(
-                //   context: context,
-                //   controller: controller,
-                //   methodId: 'cod',
-                //   title: 'Cash on Delivery',
-                //   subtitle: widget.walletDiscountAmount > 0 
-                //       ? 'Not available with wallet payment'
-                //       : 'Pay when your order arrives',
-                //   icon: Iconsax.money_send,
-                //   isSelected: controller.selectedPaymentMethod == 'cod',
-                //   isDisabled: widget.walletDiscountAmount > 0,
-                // ),
-              ],
-            )),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildModernPaymentMethodCard({
-    required BuildContext context,
-    required PaymentController controller,
-    required String methodId,
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required bool isSelected,
-    bool isDisabled = false,
-  }) {
+  /// Build online payment card - Modern design
+  Widget _buildOnlinePaymentCard(BuildContext context, PaymentController controller) {
     return GestureDetector(
-      onTap: isDisabled ? null : () {
+      onTap: () {
         HapticFeedback.selectionClick();
-        controller.selectPaymentMethod(methodId);
+        controller.selectPaymentMethod('razorpay');
       },
       child: Container(
-        padding: EdgeInsets.all(DesignSystem.spacing.md),
+        padding: EdgeInsets.all(DesignSystem.spacing.lg),
         decoration: BoxDecoration(
-          color: isDisabled 
-              ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
-              : isSelected ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.05) : Theme.of(context).cardColor,
-          borderRadius: DesignSystem.borders.md,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+            ],
+          ),
+          borderRadius: DesignSystem.borders.lg,
           border: Border.all(
-            color: isDisabled
-                ? Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)
-                : isSelected
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-            width: isSelected && !isDisabled ? 1.5 : 1,
+            color: Theme.of(context).colorScheme.primary,
+            width: 1.5,
           ),
         ),
         child: Row(
           children: [
-            Icon(
-              icon,
-              color: isDisabled 
-                  ? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
-                  : isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
-              size: 24,
+            // Payment icon
+            Container(
+              padding: EdgeInsets.all(DesignSystem.spacing.md),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: DesignSystem.borders.md,
+              ),
+              child: Icon(
+                Iconsax.card_tick,
+                color: Theme.of(context).colorScheme.primary,
+                size: 28,
+              ),
             ),
-            SizedBox(width: DesignSystem.spacing.md),
+            SizedBox(width: DesignSystem.spacing.lg),
+            // Payment method details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isDisabled
-                          ? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
-                          : isSelected 
-                              ? Theme.of(context).colorScheme.primary 
-                              : Theme.of(context).colorScheme.onSurface,
+                    'Online Payment',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
-                  SizedBox(height: DesignSystem.spacing.xs / 2),
+                  SizedBox(height: DesignSystem.spacing.xs),
                   Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: isDisabled
-                          ? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)
-                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    'UPI, Card, Net Banking & More',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
               ),
             ),
-            if (isSelected && !isDisabled)
-              Icon(
-                Iconsax.tick_circle,
-                color: Theme.of(context).colorScheme.primary,
-                size: 20,
-              ),
+            // Check mark
+            Icon(
+              Iconsax.tick_circle,
+              color: Theme.of(context).colorScheme.primary,
+              size: 24,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildModernTermsCard(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(DesignSystem.spacing.md),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: DesignSystem.borders.md,
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Iconsax.security_safe,
-            color: Theme.of(context).colorScheme.primary,
-            size: 20,
-          ),
-          SizedBox(width: DesignSystem.spacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Secure Payment',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                SizedBox(height: DesignSystem.spacing.xs / 2),
-                Text(
-                  'Your payment information is encrypted and secure. By proceeding, you agree to our terms and conditions.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildModernPaymentButton(BuildContext context, PaymentController controller) {
+  /// Build price card at bottom - Premium design
+  Widget _buildPriceCardBottom(BuildContext context, PaymentController controller) {
     return Container(
       padding: EdgeInsets.all(DesignSystem.spacing.md),
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
-        border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+        border: Border(
+          top: BorderSide(
+            color: Theme.of(context).dividerColor,
+          ),
+        ),
       ),
       child: SafeArea(
-        child: Obx(() => SizedBox(
-          height: 56,
-          child: ElevatedButton(
-            onPressed: controller.isProcessingPayment ? null : () => _processPayment(controller),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: DesignSystem.borders.lg,
+        child: Obx(() => Row(
+          children: [
+            // Total amount display on left
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Total Amount',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: DesignSystem.spacing.xs),
+                  Text(
+                    '₹${widget.finalAmount.toStringAsFixed(2)}',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: controller.isProcessingPayment
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 20,
+            SizedBox(width: DesignSystem.spacing.lg),
+            // Pay button on right
+            Expanded(
+              child: ElevatedButton(
+                onPressed: controller.isProcessingPayment ? null : () => _processPayment(controller),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: DesignSystem.borders.lg,
+                  ),
+                  disabledBackgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                  padding: EdgeInsets.symmetric(vertical: DesignSystem.spacing.md),
+                ),
+                child: controller.isProcessingPayment
+                    ? SizedBox(
                         height: 20,
+                        width: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
                           valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
-                      ),
-                      SizedBox(width: DesignSystem.spacing.md),
-                      Text(
-                        'Processing Payment...',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        controller.selectedPaymentMethod == 'razorpay' 
-                            ? Iconsax.card_tick 
-                            : Iconsax.money_send,
-                        size: 22,
-                      ),
-                      SizedBox(width: DesignSystem.spacing.sm),
-                      Column(
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          Icon(
+                            Iconsax.card_tick,
+                            size: 20,
+                          ),
+                          SizedBox(width: DesignSystem.spacing.sm),
                           Text(
-                            controller.selectedPaymentMethod == 'razorpay'
-                                ? 'Pay Now'
-                                : 'Place Order',
+                            'Pay',
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                               color: Colors.white,
                               letterSpacing: 0.5,
                             ),
                           ),
-                          Text(
-                            '₹${widget.finalAmount.toStringAsFixed(2)}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white.withValues(alpha: 0.9),
-                            ),
-                          ),
                         ],
                       ),
-                    ],
-                  ),
-          ),
+              ),
+            ),
+          ],
         )),
       ),
     );

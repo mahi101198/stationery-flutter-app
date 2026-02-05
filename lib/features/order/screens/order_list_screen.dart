@@ -244,6 +244,13 @@ class _PremiumOrderCard extends StatelessWidget {
           color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -251,90 +258,87 @@ class _PremiumOrderCard extends StatelessWidget {
           onTap: () => Get.toNamed('/order-details', arguments: orderId),
           borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header: Order ID and Status
+                // Row 1: Order ID and Status
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Order #${orderId.substring(0, 8).toUpperCase()}',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(
-                                Iconsax.calendar_1,
-                                size: 14,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                dateStr,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                              if (timeStr.isNotEmpty) ...[
-                                const SizedBox(width: 8),
-                                Text(
-                                  '•',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  timeStr,
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
+                    Flexible(
+                      child: Text(
+                        'Order #${orderId.substring(0, 8).toUpperCase()}',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.3,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    const SizedBox(width: 12),
                     OrderUIHelpers.buildModernStatusChip(status, context),
                   ],
                 ),
                 
+                // Row 2: Date and Time
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      Iconsax.calendar_1,
+                      size: 14,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        '$dateStr${timeStr.isNotEmpty ? ' • $timeStr' : ''}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // Divider
+                Divider(
+                  height: 1,
+                  color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                ),
+                
                 const SizedBox(height: 16),
                 
-                // Product preview images
-                if (previewItems.isNotEmpty) ...[ 
-                  Row(
-                    children: [
-                      ...previewItems.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final item = entry.value as Map<String, dynamic>;
-                        final itemImage = item['productImage'] ?? item['image'] ?? item['images']?[0] ?? '';
-                        
-                        return Container(
-                          margin: EdgeInsets.only(right: index < previewItems.length - 1 ? 8 : 0),
+                // Products in vertical column
+                ...previewItems.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final item = entry.value as Map<String, dynamic>;
+                  final itemImage = item['productImage'] ?? item['image'] ?? item['images']?[0] ?? '';
+                  final itemName = item['name'] ?? item['productName'] ?? 'Product';
+                  final itemQuantity = (item['quantity'] ?? 1).toInt();
+                  final itemPrice = (item['productCurrentPrice'] ?? item['price'] ?? 0).toDouble();
+                  
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: index < previewItems.length - 1 ? 12 : 0),
+                    child: Row(
+                      children: [
+                        // Product Image
+                        Container(
                           width: 60,
                           height: 60,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
                               width: 1,
                             ),
                           ),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                             child: itemImage.isNotEmpty
                                 ? CachedNetworkImage(
                                     imageUrl: itemImage,
@@ -371,37 +375,83 @@ class _PremiumOrderCard extends StatelessWidget {
                                     ),
                                   ),
                           ),
-                        );
-                      }),
-                      if (items.length > 3) ...[ 
-                        const SizedBox(width: 8),
-                        Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '+${items.length - 3}',
-                              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        
+                        const SizedBox(width: 12),
+                        
+                        // Product Title and Quantity
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                itemName,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.3,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Qty: $itemQuantity',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(width: 12),
+                        
+                        // Price
+                        Text(
+                          '₹${(itemPrice * itemQuantity).toStringAsFixed(0)}',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ],
-                    ],
+                    ),
+                  );
+                }),
+                
+                // Show more items indicator
+                if (items.length > 3) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Iconsax.add_circle,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '+${items.length - 3} more ${items.length - 3 == 1 ? 'item' : 'items'}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  
-                  const SizedBox(height: 16),
                 ],
+                
+                const SizedBox(height: 16),
                 
                 // Divider
                 Divider(
@@ -411,31 +461,37 @@ class _PremiumOrderCard extends StatelessWidget {
                 
                 const SizedBox(height: 16),
                 
-                // Items count and total
+                // Total
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Iconsax.box,
-                          size: 16,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${items.length} ${items.length == 1 ? 'Item' : 'Items'}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
                     Text(
-                      '₹${totalAmount.toStringAsFixed(0)}',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.3,
+                      'Total Amount',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.4),
+                            Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.2),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '₹${totalAmount.toStringAsFixed(0)}',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.3,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
                     ),
                   ],

@@ -1,12 +1,22 @@
 import 'package:flutter/material.dart';
 
-/// Minimal Product Image Carousel following Material 3 design
+/// Media item - can be image or video
+class _MediaItem {
+  final String url;
+  final bool isVideo;
+
+  _MediaItem({required this.url, required this.isVideo});
+}
+
+/// Unified Carousel - Images and Videos in same carousel (like Flipkart)
 class MinimalProductCarousel extends StatefulWidget {
   final List<String> images;
+  final List<String> videos;
 
   const MinimalProductCarousel({
     super.key,
     required this.images,
+    this.videos = const [],
   });
 
   @override
@@ -16,6 +26,24 @@ class MinimalProductCarousel extends StatefulWidget {
 class _MinimalProductCarouselState extends State<MinimalProductCarousel> {
   int _currentIndex = 0;
   final PageController _pageController = PageController();
+  late List<_MediaItem> _allMedia;
+  Set<int> _playingVideos = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _buildMediaList();
+  }
+
+  void _buildMediaList() {
+    _allMedia = [];
+    for (var img in widget.images) {
+      _allMedia.add(_MediaItem(url: img, isVideo: false));
+    }
+    for (var vid in widget.videos) {
+      _allMedia.add(_MediaItem(url: vid, isVideo: true));
+    }
+  }
 
   @override
   void dispose() {
@@ -41,7 +69,6 @@ class _MinimalProductCarouselState extends State<MinimalProductCarousel> {
   }
 
   Widget _buildImageWithErrorHandling(String imageUrl, BuildContext context) {
-    // Check for invalid URLs or example.com placeholders
     if (imageUrl.isEmpty || imageUrl.contains('example.com')) {
       return Directionality(
         textDirection: TextDirection.ltr,
@@ -76,14 +103,10 @@ class _MinimalProductCarouselState extends State<MinimalProductCarousel> {
       cacheWidth: 800,
       cacheHeight: 800,
       loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) {
-          return child;
-        }
-        
+        if (loadingProgress == null) return child;
         final progress = loadingProgress.expectedTotalBytes != null
             ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
             : null;
-        
         return Center(
           child: SizedBox(
             width: 40,
@@ -97,11 +120,7 @@ class _MinimalProductCarouselState extends State<MinimalProductCarousel> {
         );
       },
       errorBuilder: (context, error, stackTrace) {
-        // Log error but don't throw
-        debugPrint('❌ Image load error for URL: $imageUrl');
-        debugPrint('   Error: $error');
-        
-        // Wrap in Directionality to ensure text direction context
+        debugPrint('❌ Image load error: $imageUrl');
         return Directionality(
           textDirection: TextDirection.ltr,
           child: Container(
@@ -131,9 +150,68 @@ class _MinimalProductCarouselState extends State<MinimalProductCarousel> {
     );
   }
 
+  Widget _buildVideoThumbnail(int index) {
+    final videoUrl = _allMedia[index].url;
+    
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (_playingVideos.contains(index)) {
+            _playingVideos.remove(index);
+          } else {
+            _playingVideos.add(index);
+          }
+        });
+        debugPrint('🎬 Video tapped: $videoUrl');
+      },
+      child: Container(
+        color: Colors.black,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Video thumbnail - load first frame
+            Image.network(
+              videoUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.grey[800],
+                  child: const Center(
+                    child: Icon(Icons.video_camera_back, color: Colors.white54),
+                  ),
+                );
+              },
+            ),
+            // Play Icon Overlay
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.4),
+                shape: BoxShape.circle,
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Icon(
+                Icons.play_arrow,
+                size: 48,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMediaItem(int index) {
+    final media = _allMedia[index];
+    if (media.isVideo) {
+      return _buildVideoThumbnail(index);
+    }
+    return _buildImageItem(media.url);
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (widget.images.isEmpty) {
+    if (_allMedia.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -153,21 +231,19 @@ class _MinimalProductCarouselState extends State<MinimalProductCarousel> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: AspectRatio(
-          aspectRatio: 1.0, // Square aspect ratio
+          aspectRatio: 1.0,
           child: Stack(
             children: [
-              // Image PageView
+              // Unified Media Carousel
               PageView.builder(
                 controller: _pageController,
                 onPageChanged: _onPageChanged,
-                itemCount: widget.images.length,
-                itemBuilder: (context, index) {
-                  return _buildImageItem(widget.images[index]);
-                },
+                itemCount: _allMedia.length,
+                itemBuilder: (context, index) => _buildMediaItem(index),
               ),
 
               // Pagination Dots
-              if (widget.images.length > 1)
+              if (_allMedia.length > 1)
                 Positioned(
                   bottom: 16,
                   left: 0,
@@ -175,7 +251,7 @@ class _MinimalProductCarouselState extends State<MinimalProductCarousel> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
-                      widget.images.length,
+                      _allMedia.length,
                       (index) => GestureDetector(
                         onTap: () {
                           _pageController.animateToPage(
@@ -207,4 +283,3 @@ class _MinimalProductCarouselState extends State<MinimalProductCarousel> {
     );
   }
 }
-

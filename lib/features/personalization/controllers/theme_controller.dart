@@ -13,8 +13,8 @@ class ThemeController extends GetxController {
   static const String _followSystemKey = 'follow_system';
   
   // Reactive variables
-  final _themeMode = ThemeMode.system.obs;
-  final _followSystem = true.obs;
+  final _themeMode = ThemeMode.light.obs;
+  final _followSystem = false.obs;
   final _isDarkMode = false.obs;
   
   // Getters
@@ -39,18 +39,18 @@ class ThemeController extends GetxController {
     final savedThemeIndex = _storage.read<int>(_themeKey);
     final savedFollowSystem = _storage.read<bool>(_followSystemKey);
     
-    // If no saved preference exists, default to system theme
+    // If no saved preference exists, default to light theme
     if (savedFollowSystem == null && savedThemeIndex == null) {
-      _followSystem.value = true;
-      _themeMode.value = ThemeMode.system;
+      _followSystem.value = false;
+      _themeMode.value = ThemeMode.light;
     } else if (savedFollowSystem == false && savedThemeIndex != null) {
       // User has manually set a theme
       _followSystem.value = false;
       _themeMode.value = ThemeMode.values[savedThemeIndex];
     } else {
-      // Follow system theme
-      _followSystem.value = true;
-      _themeMode.value = ThemeMode.system;
+      // Default to light theme when no explicit setting exists
+      _followSystem.value = false;
+      _themeMode.value = ThemeMode.light;
     }
     
     _updateCurrentThemeMode();
@@ -68,6 +68,7 @@ class ThemeController extends GetxController {
         _isDarkMode.value = false;
       }
     } else {
+      // Use manual theme setting (light or dark)
       _isDarkMode.value = _themeMode.value == ThemeMode.dark;
     }
     

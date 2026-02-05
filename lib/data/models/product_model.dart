@@ -10,19 +10,29 @@ enum ProductStatus { active, inactive, out_of_stock }
 class ProductMediaModel {
   final String mainImage;
   final List<String> galleryImages;
+  final List<String> galleryVideos;  // New field for videos
 
   const ProductMediaModel({
     required this.mainImage,
     this.galleryImages = const [],
+    this.galleryVideos = const [],  // Default empty list
   });
 
-  /// Get all images (main + gallery)
+  /// Get all images (main + gallery) - IMAGES ONLY
   List<String> get allImages {
     final images = <String>[];
     if (mainImage.isNotEmpty) images.add(mainImage);
     images.addAll(galleryImages);
     return images;
   }
+
+  /// Get all videos from gallery
+  List<String> get allVideos {
+    return List<String>.from(galleryVideos);
+  }
+
+  /// Check if product has media (images or videos)
+  bool get hasMedia => allImages.isNotEmpty || allVideos.isNotEmpty;
 
   factory ProductMediaModel.fromFirestore(Map<String, dynamic> data) {
     // Parse main_image - can be either a string URL or an object with 'url' field
@@ -39,10 +49,44 @@ class ProductMediaModel {
     if (mainImageUrl.contains('example.com') || mainImageUrl.contains('placeholder')) {
       mainImageUrl = '';
     }
+
+    // Parse gallery - can be either old format (gallery_images) or new format (gallery array)
+    List<String> galleryImages = [];
+    List<String> galleryVideos = [];
+    
+    // First try the old format (gallery_images as string list)
+    if (data['gallery_images'] != null) {
+      galleryImages = _parseStringList(data['gallery_images']);
+    }
+    
+    // If gallery_images is empty, try the new format (gallery array with objects)
+    if (galleryImages.isEmpty && data['gallery'] is List) {
+      final galleryList = data['gallery'] as List;
+      for (final item in galleryList) {
+        if (item is Map) {
+          final itemType = (item['type'] ?? '').toString().toLowerCase();
+          // Extract image URLs
+          if (itemType == 'image') {
+            final imageUrl = item['url'] as String?;
+            if (imageUrl != null && imageUrl.isNotEmpty) {
+              galleryImages.add(imageUrl);
+            }
+          }
+          // Extract video URLs
+          else if (itemType == 'video') {
+            final videoUrl = item['videoUrl'] as String? ?? item['url'] as String?;
+            if (videoUrl != null && videoUrl.isNotEmpty) {
+              galleryVideos.add(videoUrl);
+            }
+          }
+        }
+      }
+    }
     
     return ProductMediaModel(
       mainImage: mainImageUrl,
-      galleryImages: _parseStringList(data['gallery_images']),
+      galleryImages: galleryImages,
+      galleryVideos: galleryVideos,
     );
   }
 
@@ -55,11 +99,16 @@ class ProductMediaModel {
     return {
       'main_image': mainImage,
       'gallery_images': galleryImages,
+      'gallery_videos': galleryVideos,
     };
   }
 
   factory ProductMediaModel.empty() {
-    return const ProductMediaModel(mainImage: '', galleryImages: []);
+    return const ProductMediaModel(
+      mainImage: '',
+      galleryImages: [],
+      galleryVideos: [],
+    );
   }
 }
 

@@ -382,11 +382,16 @@ class UnifiedOrderSummary extends StatelessWidget {
                   const SizedBox(height: 2),
                   Row(
                     children: [
-                      Text(
-                        '₹${sku.price.toStringAsFixed(0)}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: TColors.success,
+                      ShaderMask(
+                        shaderCallback: (bounds) => LinearGradient(
+                          colors: [TColors.primary, Colors.purple.shade400],
+                        ).createShader(bounds),
+                        child: Text(
+                          '₹${sku.price.toStringAsFixed(0)}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 4),
@@ -394,7 +399,8 @@ class UnifiedOrderSummary extends StatelessWidget {
                         '₹${sku.mrp.toStringAsFixed(0)}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           decoration: TextDecoration.lineThrough,
-                          color: Theme.of(context).colorScheme.outline,
+                          color: Colors.orange.shade600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
@@ -645,11 +651,16 @@ class UnifiedOrderSummary extends StatelessWidget {
                   const SizedBox(height: 2),
                   Row(
                     children: [
-                      Text(
-                        '₹${cartItem.price.toStringAsFixed(0)}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: TColors.success,
+                      ShaderMask(
+                        shaderCallback: (bounds) => LinearGradient(
+                          colors: [TColors.primary, Colors.purple.shade400],
+                        ).createShader(bounds),
+                        child: Text(
+                          '₹${cartItem.price.toStringAsFixed(0)}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 4),
@@ -657,7 +668,8 @@ class UnifiedOrderSummary extends StatelessWidget {
                         '₹${cartItem.mrp.toStringAsFixed(0)}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           decoration: TextDecoration.lineThrough,
-                          color: Theme.of(context).colorScheme.outline,
+                          color: Colors.orange.shade600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],

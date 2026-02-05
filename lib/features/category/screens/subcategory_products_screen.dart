@@ -176,40 +176,6 @@ class SubCategoryProductsScreen extends StatelessWidget {
     
     return Column(
       children: [
-        // Streaming progress indicator
-        if (controller.isStreaming)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
-            child: Row(
-              children: [
-                const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Obx(() => Text(
-                    'Loading ${controller.loadedCount}/${controller.totalCount} products...',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  )),
-                ),
-                Obx(() => Text(
-                  '${((controller.loadedCount / controller.totalCount) * 100).toInt()}%',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                )),
-              ],
-            ),
-          ),
-        
         // Products count header
         Padding(
           padding: const EdgeInsets.all(16.0),

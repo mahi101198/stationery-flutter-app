@@ -163,6 +163,7 @@ class MinimalProductDetailsScreen extends StatelessWidget {
                   SliverToBoxAdapter(
                     child: MinimalProductCarousel(
                       images: product.media.allImages,
+                      videos: product.media.allVideos,
                     ),
                   ),
 
