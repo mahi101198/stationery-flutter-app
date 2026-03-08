@@ -8,7 +8,6 @@ import 'package:rps_stationery/features/product/components/minimal/minimal_varia
 import 'package:rps_stationery/features/product/components/minimal_quantity_selector.dart';
 import 'package:rps_stationery/features/product/components/minimal/minimal_content_card_renderer.dart';
 import 'package:rps_stationery/features/product/components/minimal/minimal_delivery_info.dart';
-import 'package:rps_stationery/data/models/delivery_info_model.dart';
 import 'package:rps_stationery/features/product/components/minimal/minimal_sticky_bottom_bar.dart';
 import 'package:rps_stationery/features/product/components/minimal/minimal_divider.dart';
 import 'package:rps_stationery/features/product/components/minimal/minimal_review_section.dart';
@@ -256,14 +255,10 @@ class MinimalProductDetailsScreen extends StatelessWidget {
                     }),
                   ),
 
-                  // Delivery & Trust Info
+                  // Delivery & Trust Info (from Firestore product.delivery_info)
                   SliverToBoxAdapter(
                     child: MinimalDeliveryInfo(
-                      deliveryInfo: DeliveryInfoModel(
-                        codAvailable: true,
-                        returnPolicy: '7 days return',
-                        deliveryEstimate: '3-5 business days',
-                      ),
+                      deliveryInfo: product.deliveryInfo,
                     ),
                   ),
 
