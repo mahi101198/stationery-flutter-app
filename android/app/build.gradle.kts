@@ -24,9 +24,9 @@ android {
         minSdk = 23
         targetSdk = 35
 
-        // ✅ NEW APP → START FROM 1
-        versionCode = 1
-        versionName = "1.0.0"
+        // ✅ Version synced with pubspec.yaml
+        versionCode = 7
+        versionName = "1.0.1"
     }
 
     compileOptions {
@@ -68,6 +68,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            
+            // ✅ Generate debug symbols for Play Console crash reporting
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
         }
     }
 }

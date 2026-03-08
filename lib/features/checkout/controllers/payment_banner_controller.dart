@@ -43,7 +43,7 @@ class PaymentBannerController extends GetxController {
       print('📊 PaymentBannerController: Retrieved ${snapshot.docs.length} active banners');
 
       if (snapshot.docs.isNotEmpty) {
-        final bannerList = snapshot.docs.map((doc) {
+        final bannerList = snapshot.docs.map<BannerModel>((doc) {
           final data = doc.data();
           
           // Parse the data from payment-banners collection
@@ -59,7 +59,7 @@ class PaymentBannerController extends GetxController {
             imageUrl: imageUrl,
             redirectUrl: linkTo.isEmpty ? null : linkTo,
             active: data['isActive'] as bool? ?? true,
-            priority: rank,
+            rank: rank,
             validFrom: DateTime.now().subtract(const Duration(days: 365)),
             validTill: DateTime.now().add(const Duration(days: 365)),
             viewChangeTimeSeconds: viewChangeTime,

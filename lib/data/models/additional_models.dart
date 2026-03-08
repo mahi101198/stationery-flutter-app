@@ -425,20 +425,22 @@ class BannerModel {
   final String imageUrl;
   final String? redirectUrl;
   final bool active;
-  final int priority;
+  /// Display order — maps to the `rank` field in Firestore (1 = first).
+  final int rank;
   final DateTime validFrom;
   final DateTime validTill;
   final double viewChangeTimeSeconds;
-  
-  // Compatibility getter
+
+  // Compatibility aliases
   String get image => imageUrl;
+  int get priority => rank;
 
   const BannerModel({
     required this.bannerId,
     required this.imageUrl,
     this.redirectUrl,
     required this.active,
-    required this.priority,
+    required this.rank,
     required this.validFrom,
     required this.validTill,
     this.viewChangeTimeSeconds = 3.0,
@@ -457,7 +459,7 @@ class BannerModel {
       'imageUrl': imageUrl,
       'redirectUrl': redirectUrl,
       'active': active,
-      'priority': priority,
+      'rank': rank,
       'validFrom': Timestamp.fromDate(validFrom),
       'validTill': Timestamp.fromDate(validTill),
       'view_change_time': viewChangeTimeSeconds,
@@ -473,7 +475,8 @@ class BannerModel {
       imageUrl: data['imageUrl'] ?? '',
       redirectUrl: data['redirectUrl'],
       active: data['active'] ?? true,
-      priority: (data['priority'] ?? 0).toInt(),
+      // Prefer `rank`; fall back to `priority` for older docs.
+      rank: (data['rank'] ?? data['priority'] ?? 0).toInt(),
       validFrom: _parseTimestamp(data['validFrom']),
       validTill: _parseTimestamp(data['validTill']),
       viewChangeTimeSeconds: _parseDuration(data['view_change_time'], 3.0),

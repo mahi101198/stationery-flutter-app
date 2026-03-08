@@ -27,7 +27,7 @@ class BannerRepo extends GetxController {
         return [];
       }
       
-      final bannerList = banners.docs.map((snapshot) {
+      final bannerList = banners.docs.map<BannerModel>((snapshot) {
         final data = snapshot.data();
         log('📋 Processing banner document: ${snapshot.id}');
         log('📝 Raw data: $data');
@@ -86,7 +86,7 @@ class BannerRepo extends GetxController {
           imageUrl: imageUrl,
           redirectUrl: linkTo,
           active: isActive,
-          priority: rank,
+          rank: rank,
           validFrom: (data['createdAt'] is Timestamp)
               ? (data['createdAt'] as Timestamp).toDate()
               : DateTime.tryParse((data['createdAt'] ?? '').toString()) ?? DateTime(2000, 1, 1),

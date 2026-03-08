@@ -50,7 +50,10 @@ class BannerController extends GetxController {
         print('✅ BannerController: Successfully loaded ${banners.length} banners');
         print('✅ BannerController: Updating reactive banners list...');
         
-        this.banners.assignAll(banners);
+        // Sort by rank so position 1 always appears first in the carousel.
+        final sorted = List<BannerModel>.from(banners)
+          ..sort((a, b) => a.rank.compareTo(b.rank));
+        this.banners.assignAll(sorted);
         
         print('✅ BannerController: Banners list updated. Current length: ${this.banners.length}');
         
