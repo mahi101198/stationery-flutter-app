@@ -43,38 +43,33 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Firebase
-# firebase_options.dart
-# google-services.json
-# android/app/google-services.json
-# GoogleService-Info.plist
-# service-account-key.json
-# .firebase/
-# .firebaserc
-# lib/config/
+# Firebase — NEVER commit these
+firebase_options.dart
+lib/firebase_options.dart
+google-services.json
+android/app/google-services.json
+GoogleService-Info.plist
+ios/Runner/GoogleService-Info.plist
+service-account-key.json
+.firebase/
+.firebaserc
+lib/config/
 
-# # Android local configuration
-# android/local.properties
+# Android local configuration
+android/local.properties
 
-# # Android keystores and signing configs
-# *.keystore
-# *.jks
-# android/app/*.keystore
-# android/app/key.properties
-# android/key.properties
+# Android keystores and signing configs
+*.keystore
+*.jks
+android/app/*.keystore
+android/app/key.properties
+android/key.properties
 
-# # Environment variables
-# .env
-# .env.local
-# .env.production
-# .env.staging
-
-# # Build artifacts
-# build/
-# dist/
-# *.apk
-# *.ipa
-# *.aab
+# Environment variables
+.env
+.env.local
+.env.production
+.env.staging
 
 # Logs
 logs/
