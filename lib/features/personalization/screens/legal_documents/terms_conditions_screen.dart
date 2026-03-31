@@ -84,13 +84,13 @@ class TermsConditionsScreen extends StatelessWidget {
             _buildSection(
               context,
               title: '1. Acceptance of Terms',
-              content: 'By accessing and using the RPS Stationery mobile application ("App"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.',
+              content: 'By accessing and using the RPS Shopee mobile application ("App"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.',
             ),
             
             _buildSection(
               context,
               title: '2. Use License',
-              content: 'Permission is granted to temporarily download one copy of the RPS Stationery app for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title, and under this license you may not:\n\n• Modify or copy the materials\n• Use the materials for any commercial purpose or for any public display\n• Attempt to reverse engineer any software contained in the app\n• Remove any copyright or other proprietary notations from the materials',
+              content: 'Permission is granted to temporarily download one copy of the RPS Shopee app for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title, and under this license you may not:\n\n• Modify or copy the materials\n• Use the materials for any commercial purpose or for any public display\n• Attempt to reverse engineer any software contained in the app\n• Remove any copyright or other proprietary notations from the materials',
             ),
             
             _buildSection(
@@ -138,19 +138,19 @@ class TermsConditionsScreen extends StatelessWidget {
             _buildSection(
               context,
               title: '10. Intellectual Property',
-              content: 'The App and its original content, features, and functionality are and will remain the exclusive property of RPS Stationery and its licensors. The App is protected by copyright, trademark, and other laws.',
+              content: 'The App and its original content, features, and functionality are and will remain the exclusive property of RPS Shopee and its licensors. The App is protected by copyright, trademark, and other laws.',
             ),
             
             _buildSection(
               context,
               title: '11. Disclaimer',
-              content: 'The information on this App is provided on an "as is" basis. To the fullest extent permitted by law, RPS Stationery excludes all representations, warranties, conditions and terms relating to our App and the use of this App.',
+              content: 'The information on this App is provided on an "as is" basis. To the fullest extent permitted by law, RPS Shopee excludes all representations, warranties, conditions and terms relating to our App and the use of this App.',
             ),
             
             _buildSection(
               context,
               title: '12. Limitation of Liability',
-              content: 'In no event shall RPS Stationery, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses.',
+              content: 'In no event shall RPS Shopee, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses.',
             ),
             
             _buildSection(

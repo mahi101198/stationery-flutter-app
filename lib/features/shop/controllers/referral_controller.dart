@@ -222,7 +222,7 @@ class ReferralController extends GetxController {
   void shareReferralCode() {
     final code = referralInfo.value?['referralCode'];
     if (code != null) {
-      final shareText = 'Join RPS Stationery with my referral code "$code" and get exclusive discounts on your first order! Download the app now.';
+      final shareText = 'Join RPS Shopee with my referral code "$code" and get exclusive discounts on your first order! Download the app now.';
       Share.share(shareText);
     }
   }

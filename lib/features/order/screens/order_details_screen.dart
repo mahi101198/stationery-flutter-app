@@ -9,6 +9,7 @@ import 'package:rps_stationery/routes/app_pages.dart';
 import 'package:rps_stationery/utils/popups/loaders.dart';
 import 'package:rps_stationery/utils/popups/full_screen_loader.dart';
 import 'package:rps_stationery/features/order/components/order_ui_helpers.dart';
+import 'package:rps_stationery/features/order/components/order_review_dialog.dart';
 import 'package:intl/intl.dart';
 
 class OrderDetailsScreen extends StatelessWidget {
@@ -132,7 +133,7 @@ class OrderDetailsScreen extends StatelessWidget {
                       const SizedBox(height: 20),
                       
                       // Items
-                      _buildItemsSection(orderData, context),
+                      _buildItemsSection(orderData, context, status: orderData['status'] ?? 'pending'),
                       
                       const SizedBox(height: 20),
                       
@@ -266,8 +267,9 @@ class OrderDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildItemsSection(Map<String, dynamic> orderData, BuildContext context) {
+  Widget _buildItemsSection(Map<String, dynamic> orderData, BuildContext context, {required String status}) {
     final items = orderData['items'] as List<dynamic>? ?? [];
+    final isDelivered = status.toLowerCase() == 'delivered';
     
     return Container(
       padding: const EdgeInsets.all(20),
@@ -293,7 +295,7 @@ class OrderDetailsScreen extends StatelessWidget {
             final itemMap = item as Map<String, dynamic>;
             return Padding(
               padding: const EdgeInsets.only(bottom: 16),
-              child: _buildItemCard(itemMap, context),
+              child: _buildItemCard(itemMap, context, isDelivered: isDelivered),
             );
           }).toList(),
         ],
@@ -301,11 +303,12 @@ class OrderDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildItemCard(Map<String, dynamic> item, BuildContext context) {
+  Widget _buildItemCard(Map<String, dynamic> item, BuildContext context, {bool isDelivered = false}) {
     final name = item['name'] ?? 'Unknown Product';
     final quantity = (item['quantity'] ?? 1).toInt();
     final price = (item['productCurrentPrice'] ?? item['price'] ?? 0).toDouble();
     final image = item['productImage'] ?? item['image'] ?? '';
+    final productId = item['productId'] ?? item['id'] ?? '';
     
     return Container(
       padding: const EdgeInsets.all(12),
@@ -317,117 +320,153 @@ class OrderDetailsScreen extends StatelessWidget {
           width: 1,
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Product Image
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
-                width: 1,
-              ),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: image.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: image,
-                      fit: BoxFit.cover,
-                      fadeInDuration: const Duration(milliseconds: 200),
-                      placeholder: (context, url) => Container(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        child: Center(
-                          child: SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+          Row(
+            children: [
+              // Product Image
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: image.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: image,
+                          fit: BoxFit.cover,
+                          fadeInDuration: const Duration(milliseconds: 200),
+                          placeholder: (context, url) => Container(
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            child: Center(
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
                             ),
                           ),
+                          errorWidget: (context, url, error) => Container(
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            child: Icon(
+                              Iconsax.gallery_slash,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              size: 28,
+                            ),
+                          ),
+                        )
+                      : Container(
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                          child: Icon(
+                            Iconsax.gallery_slash,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            size: 28,
+                          ),
                         ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      name,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        height: 1.3,
                       ),
-                      errorWidget: (context, url, error) => Container(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        child: Icon(
-                          Iconsax.gallery_slash,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          size: 28,
-                        ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(6),
                       ),
-                    )
-                  : Container(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      child: Icon(
-                        Iconsax.gallery_slash,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        size: 28,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Iconsax.box,
+                            size: 14,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Qty: $quantity',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  name,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    height: 1.3,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Iconsax.box,
-                        size: 14,
-                        color: Theme.of(context).colorScheme.primary,
+                    const SizedBox(height: 8),
+                    Text(
+                      '₹${price.toStringAsFixed(0)} × $quantity',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Qty: $quantity',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '₹${(price * quantity).toStringAsFixed(0)}',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+
+          // Rate button — only for delivered orders
+          if (isDelivered && productId.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => OrderReviewDialog(
+                    productId: productId,
+                    productName: name,
+                    productImage: image.isNotEmpty ? image : null,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  '₹${price.toStringAsFixed(0)} × $quantity',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                icon: const Icon(Iconsax.star, size: 16),
+                label: const Text('Rate this Product'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+                  ),
+                  foregroundColor: Theme.of(context).colorScheme.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            '₹${(price * quantity).toStringAsFixed(0)}',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
+          ],
         ],
       ),
     );

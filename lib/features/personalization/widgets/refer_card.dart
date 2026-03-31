@@ -263,7 +263,7 @@ class ReferCard extends StatelessWidget {
 
   void _shareReferralCode(BuildContext context, String referralCode) {
     final shareText =
-        '''🎉 Join RPS Stationery and get ₹${ReferralService.instance.refereeReward.toInt()} in your wallet!
+        '''🎉 Join RPS Shopee and get ₹${ReferralService.instance.refereeReward.toInt()} in your wallet!
 
 Use my referral code: $referralCode
 
@@ -275,7 +275,7 @@ Download the app now and start shopping!''';
 
     Share.share(
       shareText,
-      subject: 'Join RPS Stationery - Get ₹${ReferralService.instance.refereeReward.toInt()} Free!',
+      subject: 'Join RPS Shopee - Get ₹${ReferralService.instance.refereeReward.toInt()} Free!',
     );
   }
 }

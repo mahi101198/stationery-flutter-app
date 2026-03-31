@@ -1,5 +1,4 @@
 import { onCall } from "firebase-functions/v2/https";
-import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 const db = getFirestore();
@@ -150,35 +149,8 @@ export const processReferralFirstOrderBonus = onCall(async (request) => {
     return await processReferralFirstOrderBonusInternal(userId, orderId, orderAmount);
 });
 /**
- * Firestore trigger to automatically process referral first order bonus
- * when an order status is updated to 'delivered'
+ * Internal function exported for use by other cloud functions
+ * to avoid duplicate Firestore triggers
  */
-export const onOrderDelivered = onDocumentUpdated("orders/{orderId}", async (event) => {
-    var _a, _b, _c, _d, _e;
-    const beforeData = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before.data();
-    const afterData = (_b = event.data) === null || _b === void 0 ? void 0 : _b.after.data();
-    if (!beforeData || !afterData) {
-        logger.warn("Missing order data in trigger");
-        return;
-    }
-    // Check if status changed to 'delivered'
-    const wasDelivered = beforeData.status === 'delivered';
-    const isNowDelivered = afterData.status === 'delivered';
-    if (wasDelivered || !isNowDelivered) {
-        // Order was already delivered or not delivered now, skip
-        return;
-    }
-    const orderId = (_c = event.params) === null || _c === void 0 ? void 0 : _c.orderId;
-    const userId = afterData.userId;
-    const orderAmount = ((_d = afterData.amountBreakdown) === null || _d === void 0 ? void 0 : _d.totalOrderAmount) || ((_e = afterData.amountBreakdown) === null || _e === void 0 ? void 0 : _e.finalAmount) || 0;
-    logger.info(`Order ${orderId} delivered for user ${userId}, checking for referral bonus`);
-    try {
-        // Call the internal function directly
-        const result = await processReferralFirstOrderBonusInternal(userId, orderId, orderAmount);
-        logger.info(`Successfully processed referral first order bonus for order ${orderId}:`, result);
-    }
-    catch (error) {
-        logger.error(`Error processing referral first order bonus for order ${orderId}:`, error);
-    }
-});
+export { processReferralFirstOrderBonusInternal };
 //# sourceMappingURL=referral.js.map

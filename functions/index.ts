@@ -12,13 +12,13 @@ import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { createOrder, razorpayWebhook, cancelOrder } from './razorpay.js';
 
 // Import referral functions
-import { processReferralSignupBonus, processReferralFirstOrderBonus, onOrderDelivered } from './referral.js';
+import { processReferralSignupBonus, processReferralFirstOrderBonus } from './referral.js';
 
 // Import delivery confirmation functions
 import { onOrderStatusUpdated, sendManualDeliveryConfirmation, sendBatchDeliveryConfirmations } from './delivery-confirmation.js';
 
 // Re-export the functions
-export { createOrder, razorpayWebhook, cancelOrder, processReferralSignupBonus, processReferralFirstOrderBonus, onOrderDelivered, onOrderStatusUpdated, sendManualDeliveryConfirmation, sendBatchDeliveryConfirmations };
+export { createOrder, razorpayWebhook, cancelOrder, processReferralSignupBonus, processReferralFirstOrderBonus, onOrderStatusUpdated, sendManualDeliveryConfirmation, sendBatchDeliveryConfirmations };
 
 setGlobalOptions({ maxInstances: 10 });
 

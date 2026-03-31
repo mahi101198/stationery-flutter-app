@@ -7,6 +7,7 @@ import 'package:rps_stationery/routes/app_pages.dart';
 import 'package:rps_stationery/components/product/product_card.dart';
 import 'package:rps_stationery/features/category/controllers/subcategory_controller.dart';
 import 'package:rps_stationery/features/category/controllers/subcategory_product_controller.dart';
+import 'package:rps_stationery/features/home/controllers/category_controller.dart';
 import 'package:rps_stationery/data/repositories/subcategory_repo.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -20,6 +21,7 @@ class OptimizedCategoryScreen extends StatefulWidget {
 class _OptimizedCategoryScreenState extends State<OptimizedCategoryScreen> {
   final SubCategoryProductController _productController = Get.put(SubCategoryProductController());
   final SubCategoryController _subCategoryController = Get.put(SubCategoryController());
+  late final CategoryController _categoryController;
   final ScrollController _scrollController = ScrollController();
   
   String _categoryName = 'All Products';
@@ -30,6 +32,10 @@ class _OptimizedCategoryScreenState extends State<OptimizedCategoryScreen> {
   @override
   void initState() {
     super.initState();
+    // Ensure CategoryController is registered (it may already be registered via bindings)
+    _categoryController = Get.isRegistered<CategoryController>()
+        ? Get.find<CategoryController>()
+        : Get.put(CategoryController());
     _initializeCategory();
     _setupScrollListener();
   }
@@ -652,7 +658,7 @@ class _OptimizedCategoryScreenState extends State<OptimizedCategoryScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Category icon with animation
+                        // Category icon — real image from DB with letter-avatar fallback
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           width: isSelected ? 44 : 36,
@@ -670,18 +676,47 @@ class _OptimizedCategoryScreenState extends State<OptimizedCategoryScreen> {
                               ),
                             ] : [],
                           ),
-                          child: Center(
-                            child: Text(
-                              categoryName.isNotEmpty ? categoryName[0].toUpperCase() : '?',
-                              style: TextStyle(
-                                color: isSelected 
-                                    ? Theme.of(context).colorScheme.onPrimary
-                                    : Theme.of(context).colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.bold,
-                                fontSize: isSelected ? 18 : 16,
+                          child: () {
+                            final cat = _categoryController.getCategoryById(categoryId);
+                            final imageUrl = cat?.image ?? '';
+                            if (imageUrl.isNotEmpty) {
+                              return ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: CachedNetworkImage(
+                                  imageUrl: imageUrl,
+                                  width: isSelected ? 44 : 36,
+                                  height: isSelected ? 44 : 36,
+                                  fit: BoxFit.cover,
+                                  fadeInDuration: const Duration(milliseconds: 200),
+                                  placeholder: (_, __) => const SizedBox.shrink(),
+                                  errorWidget: (_, __, ___) => Center(
+                                    child: Text(
+                                      categoryName.isNotEmpty ? categoryName[0].toUpperCase() : '?',
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? Theme.of(context).colorScheme.onPrimary
+                                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: isSelected ? 18 : 16,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+                            return Center(
+                              child: Text(
+                                categoryName.isNotEmpty ? categoryName[0].toUpperCase() : '?',
+                                style: TextStyle(
+                                  color: isSelected 
+                                      ? Theme.of(context).colorScheme.onPrimary
+                                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: isSelected ? 18 : 16,
+                                ),
                               ),
-                            ),
-                          ),
+                            );
+                          }(),
                         ),
                         const SizedBox(height: 6),
                         // Category name
@@ -958,16 +993,14 @@ class _OptimizedCategoryScreenState extends State<OptimizedCategoryScreen> {
     });
   }
 
-  /// Helper to get display name for category
+  /// Helper to get display name for category — looks up real name from Firestore data.
   String _getCategoryDisplayName(String categoryId) {
-    // Capitalize first letter and handle special cases
-    if (categoryId == 'stationery') return 'Stationery';
-    if (categoryId == 'housekeeping') return 'Housekeeping';
-    
-    // Generic capitalization
-    return categoryId.isEmpty 
-        ? 'Unknown'
-        : '${categoryId[0].toUpperCase()}${categoryId.substring(1)}';
+    if (categoryId.isEmpty) return 'Unknown';
+    // Try to find the category in the loaded DB data first
+    final category = _categoryController.getCategoryById(categoryId);
+    if (category != null && category.name.isNotEmpty) return category.name;
+    // Fallback: capitalise the raw ID
+    return '${categoryId[0].toUpperCase()}${categoryId.substring(1)}';
   }
 
   /// Modern gradient colors for category cards

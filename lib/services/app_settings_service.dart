@@ -114,17 +114,11 @@ class AppSettingsService extends GetxService {
 
   /// Contact Information
   String get supportPhone {
-    if (settings.value?.supportPhone == null) {
-      throw Exception('Support phone not configured in database. Please contact support.');
-    }
-    return settings.value!.supportPhone!;
+    return settings.value?.supportPhone ?? '+91-9876543210';
   }
   
   String get supportEmail {
-    if (settings.value?.supportEmail == null) {
-      throw Exception('Support email not configured in database. Please contact support.');
-    }
-    return settings.value!.supportEmail!;
+    return settings.value?.supportEmail ?? 'support@rpsstationery.com';
   }
 
   /// Referral System

@@ -155,7 +155,7 @@ class GetHelpScreen extends StatelessWidget {
             _ContactOptionTile(
               icon: Iconsax.location,
               title: 'Visit Our Store',
-              subtitle: 'RPS Stationery Main Branch',
+              subtitle: 'RPS Shopee Main Branch',
               description: address,
               onTap: () => _openMaps(context),
             ),
@@ -273,7 +273,7 @@ class GetHelpScreen extends StatelessWidget {
   }
 
   void _openWhatsApp(BuildContext context) async {
-    const message = 'Hi! I need help with my RPS Stationery order.';
+    const message = 'Hi! I need help with my RPS Shopee order.';
     final uri = Uri.parse(
       'https://wa.me/${whatsAppNumber.replaceAll(' ', '').replaceAll('+', '')}?text=${Uri.encodeComponent(message)}',
     );

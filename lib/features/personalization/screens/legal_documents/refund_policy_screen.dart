@@ -108,7 +108,7 @@ class RefundPolicyScreen extends StatelessWidget {
             _buildSection(
               context,
               title: '5. Return Process',
-              content: 'To initiate a return:\n\n1. Contact our customer support within the return timeframe\n2. Provide order number and reason for return\n3. Receive return authorization and instructions\n4. Package items securely in original packaging\n5. Ship items to our return address\n6. Wait for inspection and approval\n7. Receive refund to original payment method\n\nReturn shipping costs are covered by RPS Stationery for defective or incorrect items. For other returns, customers bear the return shipping cost.',
+              content: 'To initiate a return:\n\n1. Contact our customer support within the return timeframe\n2. Provide order number and reason for return\n3. Receive return authorization and instructions\n4. Package items securely in original packaging\n5. Ship items to our return address\n6. Wait for inspection and approval\n7. Receive refund to original payment method\n\nReturn shipping costs are covered by RPS Shopee for defective or incorrect items. For other returns, customers bear the return shipping cost.',
             ),
             
             _buildSection(

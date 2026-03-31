@@ -103,7 +103,7 @@ class ReferralController extends GetxController {
       
       // Build the share message
       final message = '''
-🎉 Join RPS Stationery and get ₹${ReferralService.instance.refereeReward} in your wallet!
+🎉 Join RPS Shopee and get ₹${ReferralService.instance.refereeReward} in your wallet!
 
 Use my referral code: ${referralCode.value}
 

@@ -110,7 +110,7 @@ class _AboutAppScreenState extends State<AboutAppScreen> {
                     null,
                     icon: Iconsax.code,
                     title: "Developer",
-                    subtitle: "RPS Stationery Team",
+                    subtitle: "RPS Shopee Team",
                     onTap: () {},
                   ),
                 ],
@@ -168,7 +168,7 @@ class _AboutAppScreenState extends State<AboutAppScreen> {
             
             // App Description
             Text(
-              'Your one-stop destination for premium stationery essentials. From pens to planners, we deliver quality products right to your doorstep.',
+              'Your one-stop destination for stationery, household essentials, and more — delivered right to your doorstep.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 height: 1.5,

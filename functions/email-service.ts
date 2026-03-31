@@ -45,35 +45,43 @@ export async function sendOrderConfirmationEmail(orderData: any, deliveryData: a
 
         const orderId = orderData.orderId || orderData.id;
         const items = orderData.items || [];
-        const total = orderData.pricing?.total || orderData.totalOrderValue || 0;
+        // ✅ FIX: Read total from correct Firestore path (razorpay.ts writes to pricingSummary.totalOrderValue)
+        const total = orderData.pricingSummary?.totalOrderValue
+            || orderData.paymentSummary?.totalOrderValue
+            || orderData.pricing?.total
+            || 0;
 
-        // Format address
-        const address = deliveryData?.address || {};
+        // ✅ FIX: deliveries collection stores address under deliveryDetails.address (not directly address)
+        const address = deliveryData?.deliveryDetails?.address || deliveryData?.address || {};
 
         // Extract customer email from address or order data
-        const customerEmail = address.email || address.mobileNumber || orderData.customerEmail || null;
+        const customerEmail = address.email || address.phoneNumber || address.mobileNumber || orderData.customerEmail || null;
+        // ✅ FIX: deliveries address fields: name/street/postalCode/phoneNumber (not recipientName/line1/pincode/mobileNumber)
         const addressString = `
-      ${address.recipientName || 'N/A'}
-      ${address.line1 || ''}
-      ${address.line2 || ''}
-      ${address.city || ''}, ${address.state || ''} - ${address.pincode || ''}
-      Phone: ${address.mobileNumber || ''}
+      ${address.name || address.recipientName || 'N/A'}
+      ${address.street || address.line1 || ''}
+      ${address.city || ''}, ${address.state || ''} - ${address.postalCode || address.pincode || ''}
+      Phone: ${address.phoneNumber || address.mobileNumber || ''}
     `;
 
-        // Format items list
-        const itemsList = items.map((item: any) =>
-            `- ${item.name} x ${item.quantity} (₹${item.price})`
-        ).join('\n');
+        // ✅ FIX: item price field is productCurrentPrice (not price) in new Firestore schema
+        const itemsList = items.map((item: any) => {
+            const itemPrice = item.productCurrentPrice || item.price || 0;
+            return `- ${item.name} x ${item.quantity} (₹${itemPrice})`;
+        }).join('\n');
 
         // Generate items table HTML
-        const itemsTableHTML = items.map((item: any) => `
+        const itemsTableHTML = items.map((item: any) => {
+            const itemPrice = item.productCurrentPrice || item.price || 0;
+            return `
           <tr style="border-bottom: 1px solid #e0e0e0;">
             <td style="padding: 12px 0; text-align: left; color: #333;">${item.name}</td>
             <td style="padding: 12px 0; text-align: center; color: #333;">${item.quantity}</td>
-            <td style="padding: 12px 0; text-align: right; color: #333;">₹${item.price}</td>
-            <td style="padding: 12px 0; text-align: right; color: #333;">₹${(item.price * item.quantity).toFixed(2)}</td>
+            <td style="padding: 12px 0; text-align: right; color: #333;">₹${itemPrice.toFixed(2)}</td>
+            <td style="padding: 12px 0; text-align: right; color: #333;">₹${(itemPrice * item.quantity).toFixed(2)}</td>
           </tr>
-        `).join('');
+        `;
+        }).join('');
 
         const mailOptions = {
             from: `"RPS Rajasthan Pustak Sadan" <${process.env.EMAIL_USER}>`,
@@ -667,15 +675,23 @@ export async function sendOrderStatusUpdateEmail(orderId: string, orderData: any
         const config = statusConfig[newStatus] || { emoji: '📋', title: newStatus, color: '#34495e', description: 'Order status updated' };
 
         const items = orderData.items || [];
-        const total = orderData.pricing?.total || orderData.totalAmount || 0;
+        // ✅ FIX: Read total from correct Firestore path
+        const total = orderData.pricingSummary?.totalOrderValue
+            || orderData.paymentSummary?.totalOrderValue
+            || orderData.pricing?.total
+            || 0;
 
-        const itemsTableHTML = items.map((item: any) => `
+        const itemsTableHTML = items.map((item: any) => {
+            // ✅ FIX: item price field is productCurrentPrice in new Firestore schema
+            const itemPrice = item.productCurrentPrice || item.price || 0;
+            return `
           <tr style="border-bottom: 1px solid #e0e0e0;">
             <td style="padding: 10px 0; text-align: left; color: #333;">${item.name}</td>
             <td style="padding: 10px 0; text-align: center; color: #333;">${item.quantity}</td>
-            <td style="padding: 10px 0; text-align: right; color: #333;">₹${(item.price * item.quantity).toFixed(2)}</td>
+            <td style="padding: 10px 0; text-align: right; color: #333;">₹${(itemPrice * item.quantity).toFixed(2)}</td>
           </tr>
-        `).join('');
+        `;
+        }).join('');
 
         const mailOptions = {
             from: `"RPS Rajasthan Pustak Sadan" <${process.env.EMAIL_USER}>`,
@@ -690,7 +706,7 @@ New Status: ${newStatus}
 Total Amount: ₹${total}
 
 Items:
-${items.map((item: any) => `- ${item.name} x ${item.quantity} (₹${(item.price * item.quantity).toFixed(2)})`).join('\n')}
+${items.map((item: any) => { const p = item.productCurrentPrice || item.price || 0; return `- ${item.name} x ${item.quantity} (₹${(p * item.quantity).toFixed(2)})`; }).join('\n')}
 
 Update: ${config.description}
             `,

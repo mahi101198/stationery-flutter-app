@@ -73,9 +73,7 @@ export const createOrder = onCall(
   async (request) => {
     try {
       console.log('🔍 Firebase Function: createOrder called');
-      console.log('🔍 Firebase Function: Request data:', JSON.stringify(request.data, null, 2));
 
-      // Verify Firebase Auth token
       if (!request.auth) {
         throw new Error('Unauthorized');
       }
@@ -174,14 +172,8 @@ export const createOrder = onCall(
         throw new Error(`totalDiscount calculation error: productDiscount(${productDiscount}) + couponDiscount(${couponDiscount}) = ${expectedTotalDiscount}, but got ${totalDiscount}`);
       }
 
-      console.log('✅ Pricing formula validation passed:');
-      console.log('   orderSubtotal (MRP) = ₹' + orderSubtotal);
-      console.log('   - productDiscount = ₹' + productDiscount);
-      console.log('   - couponDiscount = ₹' + couponDiscount);
-      console.log('   = subtotalAfterDiscount = ₹' + subtotalAfterDiscount);
-      console.log('   + deliveryFee = ₹' + deliveryFee);
-      console.log('   = totalBeforePayment = ₹' + totalBeforePayment);
-      console.log('   = totalOrderValue = ₹' + totalOrderValue);
+      console.log('✅ Pricing formula validation passed');
+      console.log('🔍 Creating order for user:', userId);
 
       // Validate payment amounts
       if (walletPaidAmount < 0) {
@@ -202,54 +194,24 @@ export const createOrder = onCall(
         throw new Error('Wallet amount must be 0 for COD payment');
       }
 
-      // Double-check validation for partial wallet payments
+      // Validate partial wallet payments
       if (paymentMode === 'partial_wallet') {
-        // Validate wallet amount
         if (walletPaidAmount <= 0) {
           throw new Error('Valid wallet amount is required for partial wallet payment');
         }
         if (onlinePaidAmount <= 0) {
           throw new Error('Valid online amount is required for partial wallet payment');
         }
-
-        // Validate total matches
         const expectedTotal = walletPaidAmount + onlinePaidAmount;
         if (Math.abs(totalOrderValue - expectedTotal) > 0.01) {
           throw new Error(`Total order value (${totalOrderValue}) does not match wallet (${walletPaidAmount}) + online (${onlinePaidAmount}) = ${expectedTotal}`);
         }
-
-        console.log('✅ Partial wallet validation passed:', {
-          orderSubtotal,
-          deliveryFee,
-          totalDiscount,
-          walletPaidAmount,
-          onlinePaidAmount,
-          totalOrderValue
-        });
       }
 
       // Validate Razorpay and COD modes have correct amounts
       if ((paymentMode === 'razorpay' || paymentMode === 'cod') && walletPaidAmount !== 0) {
         throw new Error(`Wallet amount must be 0 for ${paymentMode} payment`);
       }
-
-      console.log('🔍 Firebase Function: Creating order for user:', userId);
-      console.log('🔍 Firebase Function: Payment mode:', paymentMode);
-      console.log('💰 Pricing Summary:', {
-        orderSubtotal,
-        productDiscount,
-        couponDiscount,
-        totalDiscount,
-        subtotalAfterDiscount,
-        deliveryFee,
-        totalBeforePayment
-      });
-      console.log('💳 Payment Summary:', {
-        paymentMode,
-        walletPaidAmount,
-        onlinePaidAmount,
-        totalOrderValue
-      });
 
       // Generate IDs
       const orderId = `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`;
@@ -845,13 +807,17 @@ export const razorpayWebhook = onRequest(
 
 /**
  * Send order-related FCM notification
+ * Used by: Razorpay webhook + Payment/COD/Wallet flows
  */
 async function sendOrderNotification(userId: string, orderId: string, type: string) {
   try {
+    const notificationId = `${orderId}-${type}-${Date.now()}`;
+    console.log(`[${notificationId}] 🔔 sendOrderNotification called - type: ${type}, userId: ${userId}, orderId: ${orderId}`);
+    
     // Get user FCM token
     const userDoc = await db.collection('users').doc(userId).get();
     if (!userDoc.exists) {
-      console.log('User not found for FCM notification:', userId);
+      console.log(`[${notificationId}] ⚠️  User not found for FCM notification: ${userId}`);
       return;
     }
 
@@ -859,32 +825,25 @@ async function sendOrderNotification(userId: string, orderId: string, type: stri
     const fcmToken = userData?.fcmToken;
 
     if (!fcmToken) {
-      console.log('No FCM token found for user:', userId);
+      console.log(`[${notificationId}] ⚠️  No FCM token found for user: ${userId}`);
       return;
     }
 
     // Get order details for notification content
     const orderDoc = await db.collection('orders').doc(orderId).get();
     if (!orderDoc.exists) {
-      console.log('Order not found for notification:', orderId);
+      console.log(`[${notificationId}] ⚠️  Order not found for notification: ${orderId}`);
       return;
     }
 
     const orderData = orderDoc.data();
 
-    // safest & most semantic
+    // Get total amount for notification
     const totalAmount =
       orderData?.paymentSummary?.totalOrderValue ??
       orderData?.pricingSummary?.totalBeforePayment ??
       orderData?.transactionDetails?.amount ??
       0;
-
-    console.log('📧 Notification amount debug:');
-    console.log('  - paymentSummary.totalOrderValue:', orderData?.paymentSummary?.totalOrderValue);
-    console.log('  - pricingSummary.totalBeforePayment:', orderData?.pricingSummary?.totalBeforePayment);
-    console.log('  - transactionDetails.amount:', orderData?.transactionDetails?.amount);
-    console.log('  - Using amount:', totalAmount);
-
 
     let title = '';
     let body = '';
@@ -949,8 +908,9 @@ async function sendOrderNotification(userId: string, orderId: string, type: stri
       },
     };
 
+    console.log(`[${notificationId}] 🚀 Sending FCM message for order ${orderId}`);
     await messaging.send(message);
-    console.log('✅ FCM notification sent for order:', orderId, 'type:', type);
+    console.log(`[${notificationId}] ✅ FCM notification sent for order: ${orderId}, type: ${type}`);
 
     // Store notification in Firestore for in-app history
     try {
@@ -964,14 +924,14 @@ async function sendOrderNotification(userId: string, orderId: string, type: stri
         createdAt: FieldValue.serverTimestamp(),
         readAt: null,
       });
-      console.log('✅ Notification stored in Firestore for user:', userId);
+      console.log(`[${notificationId}] ✅ Notification stored in Firestore for user: ${userId}`);
     } catch (storeError) {
-      console.error('Error storing notification in Firestore:', storeError);
+      console.error(`[${notificationId}] ⚠️  Error storing notification in Firestore:`, storeError);
       // Don't fail the whole operation if storing fails
     }
 
   } catch (error) {
-    console.error('Error sending FCM notification:', error);
+    console.error(`Error sending FCM notification:`, error);
   }
 }
 
@@ -1004,15 +964,15 @@ async function sendOrderNotification(userId: string, orderId: string, type: stri
  */
 async function handleOrderPaid(payload: any) {
   try {
-    console.log('🔍 Processing order.paid event with payload:', JSON.stringify(payload, null, 2));
+    const webhookId = `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    console.log(`[${webhookId}] 🔍 Processing order.paid event`);
 
     // Extract order and payment details from payload
     const orderEntity = payload.order?.entity;
     const paymentEntity = payload.payment?.entity;
-    console.log("payment payload after payment ", paymentEntity, orderEntity)
 
     if (!orderEntity || !paymentEntity) {
-      console.error('❌ Invalid order.paid payload structure');
+      console.error(`[${webhookId}] ❌ Invalid order.paid payload structure`);
       return;
     }
 
@@ -1023,14 +983,10 @@ async function handleOrderPaid(payload: any) {
     const paymentMethod = paymentEntity.method;
     const capturedAt = new Date(paymentEntity.created_at * 1000); // Convert from Unix timestamp
 
-    console.log('💰 Order paid details:', {
+    console.log(`[${webhookId}] 💰 Order paid details:`, {
       razorpayOrderId,
       paymentId,
-      amount,
-      currency,
-      paymentMethod,
-      capturedAt
-    });
+      });
 
     // Find the razorpay order document using razorpayOrderId
     const razorpayOrderQuery = await db
@@ -1050,16 +1006,21 @@ async function handleOrderPaid(payload: any) {
     const userId = razorpayOrderData.userId;
     const deliveryId = razorpayOrderData.deliveryId;
 
-    console.log('✅ Found associated order:', {
-      orderId,
-      userId,
-      deliveryId,
-      isPartialWallet: razorpayOrderData.isPartialWalletPayment
-    });
+    console.log(`[${webhookId}] ✅ Found associated order: ${orderId}, userId: ${userId}`);
+
+    // ✅ IDEMPOTENCY GUARD: Razorpay retries webhooks even after receiving 200.
+    // If the order is already 'confirmed', this is a duplicate event — bail out
+    const existingOrderSnap = await db.collection('orders').doc(orderId).get();
+    if (existingOrderSnap.exists && existingOrderSnap.data()?.status === 'confirmed') {
+      console.log(`[${webhookId}] ⏭️ Order ${orderId} already confirmed — skipping duplicate webhook event`);
+      return;
+    }
 
     // Update all documents in a transaction
     await db.runTransaction(async (transaction) => {
       const now = new Date();
+
+      console.log(`[${webhookId}] 💾 Updating Firestore documents for order ${orderId}`);
 
       // 1. Update razorpay_orders document with comprehensive payment details
       transaction.update(razorpayOrderDoc.ref, {
@@ -1114,21 +1075,17 @@ async function handleOrderPaid(payload: any) {
         updatedAt: now,
       });
 
-      console.log('✅ Updated all documents for order:', orderId);
+      console.log(`[${webhookId}] ✅ All Firestore documents updated for order: ${orderId}`);
     });
 
     // Send FCM notification
+    console.log(`[${webhookId}] 📲 Sending payment_success FCM notification`);
     await sendOrderNotification(userId, orderId, 'payment_success');
 
-    console.log('✅ Order paid event processed successfully:', {
-      orderId,
-      paymentId,
-      amount,
-      isPartialWallet: razorpayOrderData.isPartialWalletPayment
-    });
+    console.log(`[${webhookId}] ✅ Order paid event processed successfully for order: ${orderId}`);
 
   } catch (error) {
-    console.error('❌ Error handling order.paid event:', error instanceof Error ? error.message : 'Unknown error');
+    console.error(`❌ Error handling order.paid event:`, error instanceof Error ? error.message : 'Unknown error');
   }
 }
 
